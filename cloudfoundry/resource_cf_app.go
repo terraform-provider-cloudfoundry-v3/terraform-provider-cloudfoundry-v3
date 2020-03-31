@@ -10,6 +10,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
@@ -288,24 +289,31 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
-	if d.Get("v3").(bool) {
-
-		session.ClientV3.GetApplication()
-	}
-
 	appDeploy, err := ResourceDataToAppDeploy(d)
 	if err != nil {
 		return err
 	}
 
-	appResp, err := deployer.Deploy(appDeploy)
-	if err != nil {
-		return err
-	}
-	AppDeployToResourceData(d, appResp)
-	err = metadataCreate(appMetadata, d, meta)
-	if err != nil {
-		return err
+	if d.Get("v3").(bool) {
+		log.Print("[INFO] Deploying as V3 app")
+		app := ccv3.Application{Name: "our app"}
+		application, warnings, err := session.ClientV3.CreateApplication(app)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Application: %+v", application)
+		fmt.Printf("Warnings: %+v", warnings)
+	} else {
+		log.Print("[INFO] Deploying as V2 app")
+		appResp, err := deployer.Deploy(appDeploy)
+		if err != nil {
+			return err
+		}
+		AppDeployToResourceData(d, appResp)
+		err = metadataCreate(appMetadata, d, meta)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
