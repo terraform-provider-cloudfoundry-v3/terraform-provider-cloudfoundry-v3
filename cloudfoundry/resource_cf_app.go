@@ -226,6 +226,11 @@ func resourceApp() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"v3": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
 		},
