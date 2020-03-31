@@ -288,6 +288,11 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
+	if d.Get("v3").(bool) {
+
+		session.ClientV3.GetApplication()
+	}
+
 	appDeploy, err := ResourceDataToAppDeploy(d)
 	if err != nil {
 		return err
