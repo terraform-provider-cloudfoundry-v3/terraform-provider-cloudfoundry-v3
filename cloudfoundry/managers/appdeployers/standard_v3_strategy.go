@@ -25,14 +25,7 @@ func (s StandardV3) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	} else {
 		deployFunc = s.client.CreateApplication
 	}
-	defaultReverse := func(ctx Context) error {
-		appResp := ctx["app_response"].(AppDeployResponse)
-		if appResp.App.GUID == "" {
-			return nil
-		}
-		_, _, err := s.client.DeleteApplication(appResp.AppV3.GUID)
-		return err
-	}
+
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
