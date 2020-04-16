@@ -177,3 +177,7 @@ func (BlueGreenV2) IsCreateNewApp() bool {
 func (BlueGreenV2) Names() []string {
 	return []string{"blue-green", "blue-green-v2"}
 }
+
+func (BlueGreenV2) StrategyType() DeployStrategyType {
+	return V2DeployStrategy
+}

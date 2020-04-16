@@ -108,7 +108,7 @@ func resourceApp() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "none",
-				Description:  "Deployment strategy, default to none but accept blue-green strategy",
+				Description:  "Deployment strategy, default to none but accept blue-green and v3 strategies",
 				ValidateFunc: validateStrategy,
 			},
 			"path": &schema.Schema{
@@ -286,7 +286,7 @@ func validateStrategy(v interface{}, k string) (ws []string, errs []error) {
 
 func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
-	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
+	deployer := session.Deployer.Strategy(d.Get("strategy").(string), d.Get("v3").(bool))
 	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
 	appDeploy, err := ResourceDataToAppDeploy(d)
@@ -294,35 +294,35 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	if d.Get("v3").(bool) {
-		log.Print("[INFO] Deploying as V3 app")
-		app := ccv3.Application{Name: "our app"}
-		application, warnings, err := session.ClientV3.CreateApplication(app)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Application: %+v", application)
-		fmt.Printf("Warnings: %+v", warnings)
-	} else {
-		log.Print("[INFO] Deploying as V2 app")
-		appResp, err := deployer.Deploy(appDeploy)
-		if err != nil {
-			return err
-		}
-		AppDeployToResourceData(d, appResp)
-		err = metadataCreate(appMetadata, d, meta)
-		if err != nil {
-			return err
-		}
+	appResp, err := deployer.Deploy(appDeploy)
+	if err != nil {
+		return err
 	}
+	AppDeployToResourceData(d, appResp)
+	err = metadataCreate(appMetadata, d, meta)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
-	app, _, err := session.ClientV2.GetApplication(d.Id())
-	if err != nil {
+	var app, appV3 = nil
+
+	if d.Get("v3").(bool) {
+		appV3, _, err := session.ClientV3.GetApplication(d.Id())
+		if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
+		return err
+	} else {
+		app, _, err := session.ClientV2.GetApplication(d.Id())
+		if err != nil {
 		if IsErrNotFound(err) {
 			d.SetId("")
 			return nil
@@ -342,6 +342,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	AppDeployToResourceData(d, appdeployers.AppDeployResponse{
 		App:             app,
+		AppV3:			 appV3,
 		RouteMapping:    mappings,
 		ServiceBindings: bindings,
 	})
@@ -359,7 +360,8 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	defer func() {
 		d.Set("id_bg", d.Id())
 	}()
-	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
+	deployer := session.Deployer.Strategy(d.Get("strategy").(string), d.Get("v3").(string))
+
 
 	// if ports has only one member and port under or equal to 1024
 	// this means that we are using not predefined port by user
@@ -635,6 +637,12 @@ func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
+
+	if d.Get("v3").(bool) {
+		_, _, err := session.ClientV3.DeleteApplication(d.Id())
+		return err
+	}
+
 	_, err := session.ClientV2.DeleteApplication(d.Id())
 	return err
 }

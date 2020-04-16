@@ -7,7 +7,9 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
 
@@ -21,42 +23,57 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		}
 	}
 
-	app := ccv2.Application{
-		GUID:                    d.Id(),
-		Name:                    d.Get("name").(string),
-		Instances:               IntToNullInt(d.Get("instances").(int)),
-		Memory:                  IntToNullByteSizeZero(d.Get("memory").(int)),
-		DiskQuota:               IntToNullByteSizeZero(d.Get("disk_quota").(int)),
-		StackGUID:               d.Get("stack").(string),
-		Buildpack:               StringToFilteredString(d.Get("buildpack").(string)),
-		Command:                 StringToFilteredString(d.Get("command").(string)),
-		EnableSSH:               BoolToNullBool(enableSSH),
-		State:                   constant.ApplicationStarted,
-		DockerImage:             d.Get("docker_image").(string),
-		HealthCheckHTTPEndpoint: d.Get("health_check_http_endpoint").(string),
-		HealthCheckType:         constant.ApplicationHealthCheckType(d.Get("health_check_type").(string)),
-		HealthCheckTimeout:      uint64(d.Get("health_check_timeout").(int)),
-		SpaceGUID:               d.Get("space").(string),
-	}
-	if d.Get("stopped").(bool) {
-		app.State = constant.ApplicationStopped
-	}
-	ports := make([]int, 0)
-	for _, vv := range d.Get("ports").(*schema.Set).List() {
-		ports = append(ports, vv.(int))
-	}
-	if len(ports) == 0 && app.DockerImage == "" {
-		ports = []int{8080}
-	}
-	app.Ports = ports
+	var app, appV3 = nil
 
-	if v, ok := d.GetOk("docker_credentials"); ok {
-		vv := v.(map[string]interface{})
-		app.DockerCredentials = ccv2.DockerCredentials{
-			Username: vv["username"].(string),
-			Password: vv["password"].(string),
+	if d.Get("v3").(bool) {
+		appV3 := ccv3.Application{
+			GUID: d.Id(),
+			Name: d.Get("name").(string),
+			Relationships: ccv3.Relationships{
+				constant.RelationshipTypeSpace: ccv3.Relationship{GUID: d.Get("space").(string)},
+			},
+		}
+	} else {
+		app := ccv2.Application{
+			GUID:                    d.Id(),
+			Name:                    d.Get("name").(string),
+			Instances:               IntToNullInt(d.Get("instances").(int)),
+			Memory:                  IntToNullByteSizeZero(d.Get("memory").(int)),
+			DiskQuota:               IntToNullByteSizeZero(d.Get("disk_quota").(int)),
+			StackGUID:               d.Get("stack").(string),
+			Buildpack:               StringToFilteredString(d.Get("buildpack").(string)),
+			Command:                 StringToFilteredString(d.Get("command").(string)),
+			EnableSSH:               BoolToNullBool(enableSSH),
+			State:                   constant.ApplicationStarted,
+			DockerImage:             d.Get("docker_image").(string),
+			HealthCheckHTTPEndpoint: d.Get("health_check_http_endpoint").(string),
+			HealthCheckType:         constant.ApplicationHealthCheckType(d.Get("health_check_type").(string)),
+			HealthCheckTimeout:      uint64(d.Get("health_check_timeout").(int)),
+			SpaceGUID:               d.Get("space").(string),
+		}
+
+		ports := make([]int, 0)
+		for _, vv := range d.Get("ports").(*schema.Set).List() {
+			ports = append(ports, vv.(int))
+		}
+		if len(ports) == 0 {
+			ports = []int{8080}
+		}
+		app.Ports = ports
+
+		if d.Get("stopped").(bool) {
+			app.State = constant.ApplicationStopped
+		}
+
+		if v, ok := d.GetOk("docker_credentials"); ok {
+			vv := v.(map[string]interface{})
+			app.DockerCredentials = ccv2.DockerCredentials{
+				Username: vv["username"].(string),
+				Password: vv["password"].(string),
+			}
 		}
 	}
+
 	if v, ok := d.GetOk("environment"); ok {
 		vv := v.(map[string]interface{})
 		envVars := make(map[string]string)
@@ -91,6 +108,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	}
 	return appdeployers.AppDeploy{
 		App:             app,
+		AppV3:           appV3,
 		ServiceBindings: bindings,
 		Mappings:        mappings,
 		Path:            d.Get("path").(string),

@@ -181,5 +181,9 @@ func (s Standard) IsCreateNewApp() bool {
 }
 
 func (s Standard) Names() []string {
-	return []string{"standard", "v2", DefaultStrategie}
+	return []string{"standard", "v2", DefaultV2Strategy}
+}
+
+func (Standard) StrategyType() DeployStrategyType {
+	return V2DeployStrategy
 }
