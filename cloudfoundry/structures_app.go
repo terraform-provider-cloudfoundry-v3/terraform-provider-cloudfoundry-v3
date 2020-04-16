@@ -120,23 +120,31 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 }
 
 func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppDeployResponse) {
-	d.SetId(appDeploy.App.GUID)
-	d.Set("name", appDeploy.App.Name)
-	d.Set("space", appDeploy.App.SpaceGUID)
-	d.Set("ports", appDeploy.App.Ports)
-	d.Set("instances", appDeploy.App.Instances.Value)
-	d.Set("memory", appDeploy.App.Memory.Value)
-	d.Set("disk_quota", appDeploy.App.DiskQuota.Value)
-	d.Set("stack", appDeploy.App.StackGUID)
-	d.Set("buildpack", appDeploy.App.Buildpack.Value)
-	d.Set("command", appDeploy.App.Command.Value)
-	d.Set("enable_ssh", appDeploy.App.EnableSSH.Value)
-	d.Set("stopped", appDeploy.App.State == constant.ApplicationStopped)
-	d.Set("docker_image", appDeploy.App.DockerImage)
-	d.Set("health_check_http_endpoint", appDeploy.App.HealthCheckHTTPEndpoint)
-	d.Set("health_check_type", string(appDeploy.App.HealthCheckType))
-	d.Set("health_check_timeout", int(appDeploy.App.HealthCheckTimeout))
-	d.Set("environment", appDeploy.App.EnvironmentVariables)
+
+	if d.Get("v3").(bool) {
+		d.SetId(appDeploy.AppV3.GUID)
+		d.Set("name", appDeploy.AppV3.Name)
+		d.Set("space", appDeploy.AppV3.Relationships[constantv3.RelationshipTypeSpace].GUID)
+		d.Set("stopped", appDeploy.AppV3.State == constantv3.ApplicationStopped)
+	} else {
+		d.SetId(appDeploy.App.GUID)
+		d.Set("name", appDeploy.App.Name)
+		d.Set("space", appDeploy.App.SpaceGUID)
+		d.Set("ports", appDeploy.App.Ports)
+		d.Set("instances", appDeploy.App.Instances.Value)
+		d.Set("memory", appDeploy.App.Memory.Value)
+		d.Set("disk_quota", appDeploy.App.DiskQuota.Value)
+		d.Set("stack", appDeploy.App.StackGUID)
+		d.Set("buildpack", appDeploy.App.Buildpack.Value)
+		d.Set("command", appDeploy.App.Command.Value)
+		d.Set("enable_ssh", appDeploy.App.EnableSSH.Value)
+		d.Set("stopped", appDeploy.App.State == constant.ApplicationStopped)
+		d.Set("docker_image", appDeploy.App.DockerImage)
+		d.Set("health_check_http_endpoint", appDeploy.App.HealthCheckHTTPEndpoint)
+		d.Set("health_check_type", string(appDeploy.App.HealthCheckType))
+		d.Set("health_check_timeout", int(appDeploy.App.HealthCheckTimeout))
+		d.Set("environment", appDeploy.App.EnvironmentVariables)
+	}
 
 	bindingsTf := getListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
