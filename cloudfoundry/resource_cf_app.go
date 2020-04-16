@@ -309,29 +309,36 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 
 func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
-
-	var app, appV3 = nil
+	var app ccv2.Application
+	var appV3 ccv3.Application
 
 	if d.Get("v3").(bool) {
-		appV3, _, err := session.ClientV3.GetApplication(d.Id())
+		appList, _, err := session.ClientV3.GetApplications(
+			ccv3.Query{Key: ccv3.AppGUIDFilter, Values: []string{d.Id()}},
+		)
 		if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
+			return err
 		}
-		return err
+		appV3 = appList[0]
 	} else {
-		app, _, err := session.ClientV2.GetApplication(d.Id())
+		appV2, _, err := session.ClientV2.GetApplication(d.Id())
 		if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
+			return err
 		}
-		return err
+		app = appV2
 	}
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
 		d.Set("id_bg", d.Id())
 	}
+
 	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
 	if err != nil {
 		return err
@@ -342,7 +349,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	AppDeployToResourceData(d, appdeployers.AppDeployResponse{
 		App:             app,
-		AppV3:			 appV3,
+		AppV3:           appV3,
 		RouteMapping:    mappings,
 		ServiceBindings: bindings,
 	})
@@ -351,6 +358,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	return nil
+
 }
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -360,8 +368,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	defer func() {
 		d.Set("id_bg", d.Id())
 	}()
-	deployer := session.Deployer.Strategy(d.Get("strategy").(string), d.Get("v3").(string))
-
+	deployer := session.Deployer.Strategy(d.Get("strategy").(string), d.Get("v3").(bool))
 
 	// if ports has only one member and port under or equal to 1024
 	// this means that we are using not predefined port by user

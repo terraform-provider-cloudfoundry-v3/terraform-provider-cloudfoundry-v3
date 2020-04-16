@@ -57,7 +57,7 @@ func (s StandardV3) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 }
 
 func (s StandardV3) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
-	app, _, err := s.client.RestageApplication(appDeploy.AppV3)
+	app, _, err := s.client.UpdateApplicationRestart(appDeploy.AppV3.GUID)
 	if err != nil {
 		return AppDeployResponse{}, err
 	}

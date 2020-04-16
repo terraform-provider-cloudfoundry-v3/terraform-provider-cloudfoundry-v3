@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	constantv3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
@@ -23,14 +23,15 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		}
 	}
 
-	var app, appV3 = nil
+	var app ccv2.Application
+	var appV3 ccv3.Application
 
 	if d.Get("v3").(bool) {
-		appV3 := ccv3.Application{
+		appV3 = ccv3.Application{
 			GUID: d.Id(),
 			Name: d.Get("name").(string),
 			Relationships: ccv3.Relationships{
-				constant.RelationshipTypeSpace: ccv3.Relationship{GUID: d.Get("space").(string)},
+				constantv3.RelationshipTypeSpace: ccv3.Relationship{GUID: d.Get("space").(string)},
 			},
 		}
 	} else {
