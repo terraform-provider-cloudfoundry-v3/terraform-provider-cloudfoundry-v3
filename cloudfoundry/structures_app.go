@@ -34,6 +34,10 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 				constantv3.RelationshipTypeSpace: ccv3.Relationship{GUID: d.Get("space").(string)},
 			},
 		}
+
+		if _, ok := d.GetOk("docker_image"); ok {
+			appV3.LifecycleType = constantv3.AppLifecycleTypeDocker
+		}
 	} else {
 		app = ccv2.Application{
 			GUID:                    d.Id(),
