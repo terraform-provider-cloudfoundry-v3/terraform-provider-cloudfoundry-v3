@@ -35,7 +35,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 			},
 		}
 	} else {
-		app := ccv2.Application{
+		app = ccv2.Application{
 			GUID:                    d.Id(),
 			Name:                    d.Get("name").(string),
 			Instances:               IntToNullInt(d.Get("instances").(int)),
