@@ -314,7 +314,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 
 	if d.Get("v3").(bool) {
 		appList, _, err := session.ClientV3.GetApplications(
-			ccv3.Query{Key: ccv3.AppGUIDFilter, Values: []string{d.Id()}},
+			ccv3.Query{Key: ccv3.GUIDFilter, Values: []string{d.Id()}},
 		)
 		if err != nil {
 			if IsErrNotFound(err) {
