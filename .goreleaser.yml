@@ -32,6 +32,8 @@ builds:
       - goos: openbsd
         goarch: arm64
     binary: '{{ .ProjectName }}_v{{ .Version }}'
+release:
+  draft: true
 archives:
   - format: zip
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
