@@ -78,11 +78,11 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 				VERSION = %q,
 			}
 
-				instances = %d
-				memory_in_mb = 1024
-				disk_in_mb = 1024
-				healthcheck_type = "http"
-				healthcheck_endpoint = "/"
+			instances = %d
+			memory_in_mb = 1024
+			disk_in_mb = 1024
+			health_check_type = "http"
+			health_check_endpoint = "/"
 		}
 	`
 
@@ -120,7 +120,7 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "http"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "http"),
 				),
 			},
 
@@ -179,7 +179,7 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 			instances = 2
 			memory_in_mb = 1024
 			disk_in_mb = 1024
-			healthcheck_type = "process"
+			health_check_type = "process"
 
 			lifecycle_type = "docker"
 			docker_image = "cloudfoundry/diego-docker-app:latest"
@@ -187,7 +187,6 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 			environment = {
 				VERSION = %q,
 			}
-
 		}
 	`
 
@@ -223,7 +222,7 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "process"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "process"),
 				),
 			},
 
@@ -375,11 +374,11 @@ func appCheckProcessByType(n string, procType string, expectedProc resources.Pro
 		}
 
 		if proc.HealthCheckEndpoint != expectedProc.HealthCheckEndpoint {
-			return fmt.Errorf("expected %s proc healthcheck endpoint to be %q got %q", procType, expectedProc.HealthCheckEndpoint, proc.HealthCheckEndpoint)
+			return fmt.Errorf("expected %s proc health_check_endpoint to be %q got %q", procType, expectedProc.HealthCheckEndpoint, proc.HealthCheckEndpoint)
 		}
 
 		if proc.HealthCheckType != expectedProc.HealthCheckType {
-			return fmt.Errorf("expected the %s proc healthcheck type to be %q but got %q", procType, expectedProc.HealthCheckType, proc.HealthCheckType)
+			return fmt.Errorf("expected the %s proc health_check_type to be %q but got %q", procType, expectedProc.HealthCheckType, proc.HealthCheckType)
 		}
 
 		return nil

@@ -114,14 +114,14 @@ func resourceApp() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
-			"healthcheck_type": {
+			"health_check_type": {
 				Description:  "Type of health check to perform; one of: port, process or http",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "port",
 				ValidateFunc: validation.StringInSlice([]string{"port", "process", "http"}, false),
 			},
-			"healthcheck_endpoint": {
+			"health_check_endpoint": {
 				Description: "HTTP endpoint called to determine if the app is healthy. (valid only when type is http)",
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -270,8 +270,8 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{})
 	_ = d.Set("state", string(app.State))
 	_ = d.Set("environment", env.EnvironmentVariables)
 	_ = d.Set("command", web.Command.Value)
-	_ = d.Set("healthcheck_type", string(web.HealthCheckType))
-	_ = d.Set("healthcheck_endpoint", web.HealthCheckEndpoint)
+	_ = d.Set("health_check_type", string(web.HealthCheckType))
+	_ = d.Set("health_check_endpoint", web.HealthCheckEndpoint)
 	_ = d.Set("memory_in_mb", web.MemoryInMB.Value)
 	_ = d.Set("disk_in_mb", web.DiskInMB.Value)
 	_ = d.Set("instances", web.Instances.Value)
@@ -560,13 +560,13 @@ func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest 
 		manifest.DiskQuota = fmt.Sprintf("%dM", n)
 	}
 
-	if v, ok := d.GetOk("healthcheck_type"); ok {
+	if v, ok := d.GetOk("health_check_type"); ok {
 		s := v.(string)
 		manifest.HealthCheckType = constant.HealthCheckType(s)
 	}
 
 	if manifest.HealthCheckType == constant.HTTP {
-		if v, ok := d.GetOk("healthcheck_endpoint"); ok {
+		if v, ok := d.GetOk("health_check_endpoint"); ok {
 			s := v.(string)
 			if s == "" {
 				s = "/"
