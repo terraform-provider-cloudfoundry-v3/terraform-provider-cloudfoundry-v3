@@ -1,0 +1,21 @@
+name: sync-release-repo
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'release-repo-test-*'
+    branches:
+      - master
+jobs:
+  repo-sync:
+    if: ${{ github.repository_owner == 'alphagov' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: repo-sync
+      uses: wei/git-sync@v2
+      with:
+        source_repo: "https://github.com/${{ github.repository }}.git"
+        source_branch: ${{ github.ref }}
+        destination_repo: "git@github.com:terraform-provider-cloudfoundry-v3/terraform-provider-cloudfoundry-v3.git"
+        destination_branch: ${{ github.ref }}
+        ssh_private_key: ${{ secrets.RELEASE_REPO_SSH_PRIVATE_KEY }}
