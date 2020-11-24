@@ -98,11 +98,11 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 
 	domainParts := strings.Split(domain.Name, ".")
 
-	d.Set("name", domain.Name)
-	d.Set("sub_domain", domainParts[0])
-	d.Set("domain", strings.Join(domainParts[1:], "."))
-	d.Set("org", domain.OrganizationGUID)
-	d.Set("internal", domain.Internal)
+	_ = d.Set("name", domain.Name)
+	_ = d.Set("sub_domain", domainParts[0])
+	_ = d.Set("domain", strings.Join(domainParts[1:], "."))
+	_ = d.Set("org", domain.OrganizationGUID)
+	_ = d.Set("internal", domain.Internal.Value)
 	d.SetId(domain.GUID)
 	return err
 }

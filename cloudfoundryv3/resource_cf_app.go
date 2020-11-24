@@ -52,6 +52,7 @@ func resourceApp() *schema.Resource {
 				Description:  "The lifecycle type of the source. There are two types (lifecycles) of cloudfoundry application builds, 'buildpack' and 'docker'. For buildpack source types, you must supply `source_code_path` to a zip of application source code. For the 'docker' source type, you must supply the `docker_image`.",
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				ValidateFunc: validation.StringInSlice([]string{"buildpack", "docker", "kpack"}, false),
 				ForceNew:     true,
 			},
@@ -96,12 +97,6 @@ func resourceApp() *schema.Resource {
 				Optional:      true,
 				ValidateFunc:  validation.StringIsNotEmpty,
 				ConflictsWith: []string{"stack", "buildpacks", "source_code_path"},
-			},
-
-			"droplet_id": {
-				Description: "The current droplet GUID used by the application",
-				Type:        schema.TypeString,
-				Computed:    true,
 			},
 
 			"strategy": {
@@ -183,6 +178,7 @@ func resourceApp() *schema.Resource {
 						elem["healthcheck_endpoint"],
 					))
 				},
+				MinItems: 1,
 			},
 
 			"service": {
@@ -336,7 +332,6 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{})
 	_ = d.Set("state", string(app.State))
 	_ = d.Set("environment", env.EnvironmentVariables)
 	_ = d.Set("process", processes)
-	_ = d.Set("droplet_id", droplet.GUID)
 
 	switch app.LifecycleType {
 	case constant.AppLifecycleTypeBuildpack:
@@ -380,22 +375,26 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 
 	switch app.LifecycleType {
 	case constant.AppLifecycleTypeBuildpack:
-		if d.HasChanges("buildpacks", "source_code_path", "source_code_hash", "stack", "environment") {
-			newBuildpackDroplet, errs := createBuildpackDroplet(ctx, s, d)
-			diags = append(diags, errs...)
-			if diags.HasError() {
-				return diags
+		if _, ok := d.GetOk("source_code_path"); ok {
+			if d.HasChanges("buildpacks", "source_code_path", "source_code_hash", "stack", "environment") {
+				newBuildpackDroplet, errs := createBuildpackDroplet(ctx, s, d)
+				diags = append(diags, errs...)
+				if diags.HasError() {
+					return diags
+				}
+				desiredDroplet = *newBuildpackDroplet
 			}
-			desiredDroplet = *newBuildpackDroplet
 		}
 	case constant.AppLifecycleTypeDocker:
-		if d.HasChanges("docker_image", "docker_username", "docker_password", "environment") {
-			newDockerDroplet, errs := createDockerDroplet(ctx, s, d)
-			diags = append(diags, errs...)
-			if diags.HasError() {
-				return diags
+		if _, ok := d.GetOk("docker_image"); ok {
+			if d.HasChanges("docker_image", "docker_username", "docker_password", "environment") {
+				newDockerDroplet, errs := createDockerDroplet(ctx, s, d)
+				diags = append(diags, errs...)
+				if diags.HasError() {
+					return diags
+				}
+				desiredDroplet = *newDockerDroplet
 			}
-			desiredDroplet = *newDockerDroplet
 		}
 	default:
 		diags = append(diags, diag.Diagnostic{
@@ -504,30 +503,32 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, m interface{
 				return diags
 			}
 		case constant.ApplicationStarted:
-			log.Printf("[%s] starting application... OK!\n", app.Name)
-			_, warns, err := s.ClientV3.UpdateApplicationStart(app.GUID)
-			diags = append(diags, diagFromClient("update-application", warns, err)...)
-			if diags.HasError() {
-				return diags
-			}
-			processes, warns, err := s.ClientV3.GetApplicationProcesses(d.Id())
-			diags = append(diags, diagFromClient("get-application-processes", warns, err)...)
-			if diags.HasError() {
-				return diags
-			}
-
-			for _, process := range processes {
-				jobState := &resource.StateChangeConf{
-					Pending:        processInstancePendingStates,
-					Target:         processInstanceSuccessStates,
-					Refresh:        processInstanceStateFunc(s, process),
-					Timeout:        d.Timeout(schema.TimeoutUpdate),
-					PollInterval:   5 * time.Second,
-					Delay:          5 * time.Second,
-					NotFoundChecks: 2,
+			if desiredDroplet.GUID != "" {
+				log.Printf("[%s] starting application... OK!\n", app.Name)
+				_, warns, err := s.ClientV3.UpdateApplicationStart(app.GUID)
+				diags = append(diags, diagFromClient("update-application", warns, err)...)
+				if diags.HasError() {
+					return diags
 				}
-				if _, err = jobState.WaitForStateContext(ctx); err != nil {
-					return diag.FromErr(err)
+				processes, warns, err := s.ClientV3.GetApplicationProcesses(d.Id())
+				diags = append(diags, diagFromClient("get-application-processes", warns, err)...)
+				if diags.HasError() {
+					return diags
+				}
+
+				for _, process := range processes {
+					jobState := &resource.StateChangeConf{
+						Pending:        processInstancePendingStates,
+						Target:         processInstanceSuccessStates,
+						Refresh:        processInstanceStateFunc(s, process),
+						Timeout:        d.Timeout(schema.TimeoutUpdate),
+						PollInterval:   5 * time.Second,
+						Delay:          5 * time.Second,
+						NotFoundChecks: 2,
+					}
+					if _, err = jobState.WaitForStateContext(ctx); err != nil {
+						return diag.FromErr(err)
+					}
 				}
 			}
 		}

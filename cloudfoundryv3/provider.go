@@ -91,9 +91,10 @@ func Provider() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"cloudfoundry_v3_route":            resourceRoute(),
-			"cloudfoundry_v3_app":              resourceApp(),
-			"cloudfoundry_v3_service_instance": resourceServiceInstance(),
+			"cloudfoundry_v3_route":             resourceRoute(),
+			"cloudfoundry_v3_route_destination": resourceRouteDestination(),
+			"cloudfoundry_v3_app":               resourceApp(),
+			"cloudfoundry_v3_service_instance":  resourceServiceInstance(),
 		},
 
 		ConfigureContextFunc: providerConfigure,

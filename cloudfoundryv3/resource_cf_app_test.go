@@ -12,7 +12,57 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func TestAccResAppBuildpackBasic(t *testing.T) {
+func TestAccResAppWithRouting(t *testing.T) {
+	space := testAccEnv.Space
+
+	src := `
+
+		data "cloudfoundry_v3_domain" "foo" {
+		  name = "apps.internal"
+		}
+
+		resource "cloudfoundry_v3_app" "foo" {
+			name = "foo-with-route"
+			space_id = %q
+			state = "STOPPED"
+			process {
+				type = "web"
+				instances = 1
+			}
+		}
+
+		resource "cloudfoundry_v3_route" "foo" {
+			domain_id = data.cloudfoundry_v3_domain.foo.id
+			space_id = %q
+			host = "basic-test-route"
+		}
+
+		resource "cloudfoundry_v3_route_destination" "foo" {
+			route_id = cloudfoundry_v3_route.foo.id
+			app_id = cloudfoundry_v3_app.foo.id
+		}
+
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     testAccPreCheck(t),
+		Providers:    testAccProviders,
+		CheckDestroy: appCheckDestroy,
+		Steps: []resource.TestStep{
+
+			// expect app with route mapped to web process
+
+			{
+				Config: fmt.Sprintf(src, space.GUID, space.GUID),
+				Check: resource.ComposeTestCheckFunc(
+					appCheckExists("cloudfoundry_v3_app.foo"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "space_id", space.GUID),
+				),
+			},
+		},
+	})
+}
+func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 	space := testAccEnv.Space
 	appSourceZipPath := testAccEnv.AssetPath("dummy-app.zip")
 
@@ -129,7 +179,7 @@ func TestAccResAppBuildpackBasic(t *testing.T) {
 	})
 }
 
-func TestAccResAppDockerBasic(t *testing.T) {
+func TestAccResAppDockerRollingDeployment(t *testing.T) {
 	space := testAccEnv.Space
 
 	src := `

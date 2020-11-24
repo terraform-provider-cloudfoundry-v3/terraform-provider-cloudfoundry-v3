@@ -43,8 +43,6 @@ type Session struct {
 	// NetClient permit to access to networking policy api
 	NetClient *cfnetv1.Client
 
-	defaultQuotaGuid string
-
 	PurgeWhenDelete bool
 
 	Config Config
