@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
-	"code.cloudfoundry.org/cli/util/manifestparser"
+	"code.cloudfoundry.org/cli/util/manifest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -114,6 +114,7 @@ func resourceApp() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
+
 			"health_check_type": {
 				Description:  "Type of health check to perform; one of: port, process or http",
 				Type:         schema.TypeString,
@@ -121,18 +122,28 @@ func resourceApp() *schema.Resource {
 				Default:      "port",
 				ValidateFunc: validation.StringInSlice([]string{"port", "process", "http"}, false),
 			},
+
 			"health_check_endpoint": {
 				Description: "HTTP endpoint called to determine if the app is healthy. (valid only when type is http)",
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 			},
+
+			"health_check_timeout": {
+				Description: "timeout waiting for healthcheck response",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+			},
+
 			"instances": {
 				Description: "The number of instances of this application's web process to run",
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     1,
 			},
+
 			"memory_in_mb": {
 				Description:  "The memory limit in mb for all instances of the web process",
 				Type:         schema.TypeInt,
@@ -140,6 +151,7 @@ func resourceApp() *schema.Resource {
 				Default:      1024,
 				ValidateFunc: validation.IntAtLeast(64),
 			},
+
 			"disk_in_mb": {
 				Description:  "The disk limit in mb allocated per instance",
 				Type:         schema.TypeInt,
@@ -533,51 +545,60 @@ func getApplication(s *managers.Session, d *schema.ResourceData) (app *resources
 	return &apps[0], diags
 }
 
-func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest *manifestparser.Application, diags diag.Diagnostics) {
+func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest *manifest.Application, diags diag.Diagnostics) {
 	lifecycleType := constant.AppLifecycleType(d.Get("lifecycle_type").(string))
 
-	manifest := &manifestparser.Application{
-		Name:         d.Get("name").(string),
-		DefaultRoute: false,
-		RandomRoute:  false,
-		RemainingManifestFields: map[string]interface{}{
-			"command": nil,
-		},
+	manifest := &manifest.Application{
+		Name:        d.Get("name").(string),
+		Routes:      []string{},
+		Services:    []string{},
+		RandomRoute: false,
 	}
 
 	if v, ok := d.GetOk("instances"); ok {
 		n := v.(int)
-		manifest.Instances = &n
+		manifest.Instances.IsSet = true
+		manifest.Instances.Value = n
 	}
 
 	if v, ok := d.GetOk("memory_in_mb"); ok {
 		n := v.(int)
-		manifest.Memory = fmt.Sprintf("%dM", n)
+		manifest.Memory.IsSet = true
+		manifest.Memory.Value = uint64(n)
 	}
 
 	if v, ok := d.GetOk("disk_in_mb"); ok {
 		n := v.(int)
-		manifest.DiskQuota = fmt.Sprintf("%dM", n)
+		manifest.DiskQuota.Value = uint64(n)
+		manifest.DiskQuota.IsSet = true
 	}
 
 	if v, ok := d.GetOk("health_check_type"); ok {
 		s := v.(string)
-		manifest.HealthCheckType = constant.HealthCheckType(s)
+		manifest.HealthCheckType = s
 	}
 
-	if manifest.HealthCheckType == constant.HTTP {
+	if v, ok := d.GetOk("health_check_timeout"); ok {
+		n := v.(int)
+		manifest.HealthCheckTimeout = uint64(n)
+	}
+
+	if manifest.HealthCheckType == string(constant.HTTP) {
 		if v, ok := d.GetOk("health_check_endpoint"); ok {
 			s := v.(string)
 			if s == "" {
 				s = "/"
 			}
-			manifest.HealthCheckEndpoint = s
+			manifest.HealthCheckHTTPEndpoint = s
 		}
 	}
 
 	if v, ok := d.GetOk("command"); ok {
 		s := v.(string)
-		manifest.SetStartCommand(s)
+		if s != "" {
+			manifest.Command.IsSet = true
+			manifest.Command.Value = s
+		}
 	}
 
 	if lifecycleType == constant.AppLifecycleTypeBuildpack {
@@ -587,12 +608,10 @@ func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest 
 				buildpacks = append(buildpacks, v.(string))
 			}
 		}
-		manifest.SetBuildpacks(buildpacks)
-		manifest.Stack = d.Get("stack").(string)
+		manifest.Buildpacks = buildpacks
+		manifest.StackName = d.Get("stack").(string)
 	} else if lifecycleType == constant.AppLifecycleTypeDocker {
-		manifest.Docker = &manifestparser.Docker{
-			Image: d.Get("docker_image").(string),
-		}
+		manifest.DockerImage = d.Get("docker_image").(string)
 	}
 
 	return manifest, diags
@@ -804,8 +823,12 @@ func applyAppManifest(ctx context.Context, s *managers.Session, d *schema.Resour
 		return diags
 	}
 
-	manifest := manifestparser.Manifest{
-		Applications: []manifestparser.Application{*appManifest},
+	manifest := struct {
+		Applications []manifest.Application
+	}{
+		Applications: []manifest.Application{
+			*appManifest,
+		},
 	}
 	rawManifest, err := yaml.Marshal(manifest)
 	if err != nil {

@@ -43,16 +43,15 @@ func resourceRoute() *schema.Resource {
 				ForceNew: true,
 			},
 
-			// 			"port": { // tcp routes not implemented
-			// 				Type:          schema.TypeInt,
-			// 				Optional:      true,
-			// 				Computed:      true,
-			// 			},
-
 			"path": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+			},
+
+			"endpoint": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
@@ -78,7 +77,7 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 
 func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 	session := meta.(*managers.Session)
-	domainGUID := d.Get("domain").(string)
+	domainGUID := d.Get("domain_id").(string)
 	spaceGUID := d.Get("space_id").(string)
 	host := d.Get("host").(string)
 	path := d.Get("path").(string)

@@ -52,7 +52,7 @@ func TestAccResAppWithRouting(t *testing.T) {
 				Config: fmt.Sprintf(src, space.GUID, space.GUID),
 				Check: resource.ComposeTestCheckFunc(
 					appCheckExists("cloudfoundry_v3_app.foo"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "space_id", space.GUID),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "endpoint", "basic-test-route.apps.internal/foo"),
 				),
 			},
 		},
