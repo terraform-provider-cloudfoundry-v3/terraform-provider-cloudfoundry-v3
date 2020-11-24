@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"context"
+	"fmt"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/resources"
@@ -77,12 +78,22 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 
 func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {
 	session := meta.(*managers.Session)
+	domainGUID := d.Get("domain").(string)
+	spaceGUID := d.Get("space_id").(string)
+	host := d.Get("host").(string)
+	path := d.Get("path").(string)
+
+	domain, warns, err := session.ClientV3.GetDomain(domainGUID)
+	diags = append(diags, diagFromClient("get-domain-for-route", warns, err)...)
+	if diags.HasError() {
+		return diags
+	}
 
 	routes, warns, err := session.ClientV3.GetRoutes(
-		ccv3.Query{Key: ccv3.DomainGUIDFilter, Values: []string{d.Get("domain_id").(string)}},
-		ccv3.Query{Key: ccv3.SpaceGUIDFilter, Values: []string{d.Get("space_id").(string)}},
-		ccv3.Query{Key: ccv3.HostsFilter, Values: []string{d.Get("host").(string)}},
-		ccv3.Query{Key: ccv3.PathsFilter, Values: []string{d.Get("path").(string)}},
+		ccv3.Query{Key: ccv3.DomainGUIDFilter, Values: []string{domainGUID}},
+		ccv3.Query{Key: ccv3.SpaceGUIDFilter, Values: []string{spaceGUID}},
+		ccv3.Query{Key: ccv3.HostsFilter, Values: []string{host}},
+		ccv3.Query{Key: ccv3.PathsFilter, Values: []string{path}},
 	)
 	diags = append(diags, diagFromClient("get-routes", warns, err)...)
 	if diags.HasError() {
@@ -92,6 +103,13 @@ func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interfa
 		d.SetId("")
 		return diags
 	}
+	route := routes[0]
+
+	endpoint := fmt.Sprintf("%s.%s", route.Host, domain.Name)
+	if route.Path != "" {
+		endpoint += "/" + route.Path
+	}
+	_ = d.Set("endpoint", endpoint)
 	return diags
 }
 
