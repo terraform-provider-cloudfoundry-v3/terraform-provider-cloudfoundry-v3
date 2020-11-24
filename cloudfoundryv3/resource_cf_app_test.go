@@ -25,10 +25,6 @@ func TestAccResAppWithRouting(t *testing.T) {
 			name = "foo-with-route"
 			space_id = %q
 			state = "STOPPED"
-			process {
-				type = "web"
-				instances = 1
-			}
 		}
 
 		resource "cloudfoundry_v3_route" "foo" {
@@ -82,14 +78,11 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 				VERSION = %q,
 			}
 
-			process {
 				instances = %d
 				memory_in_mb = 1024
 				disk_in_mb = 1024
 				healthcheck_type = "http"
-				healthcheck_timeout = 111
 				healthcheck_endpoint = "/"
-			}
 		}
 	`
 
@@ -117,7 +110,6 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 						HealthCheckType:     constant.HTTP,
 						Instances:           types.NullInt{Value: 2},
 						HealthCheckEndpoint: "/",
-						HealthCheckTimeout:  111,
 						MemoryInMB:          types.NullUint64{Value: 1024},
 						DiskInMB:            types.NullUint64{Value: 1024},
 					}),
@@ -125,11 +117,10 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "space_id", space.GUID),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "state", "STARTED"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.type", "web"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.instances", "2"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.memory_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.healthcheck_type", "http"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "http"),
 				),
 			},
 
@@ -169,7 +160,6 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 						HealthCheckType:     constant.HTTP,
 						Instances:           types.NullInt{Value: 1},
 						HealthCheckEndpoint: "/",
-						HealthCheckTimeout:  111,
 						MemoryInMB:          types.NullUint64{Value: 1024},
 						DiskInMB:            types.NullUint64{Value: 1024},
 					}),
@@ -186,7 +176,10 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 		resource "cloudfoundry_v3_app" "basic" {
 			name = "basic-docker"
 			space_id = %q
-			state = "STARTED"
+			instances = 2
+			memory_in_mb = 1024
+			disk_in_mb = 1024
+			healthcheck_type = "process"
 
 			lifecycle_type = "docker"
 			docker_image = "cloudfoundry/diego-docker-app:latest"
@@ -195,13 +188,6 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 				VERSION = %q,
 			}
 
-			process {
-				instances = 2
-				memory_in_mb = 1024
-				disk_in_mb = 1024
-				healthcheck_timeout = 112
-				healthcheck_type = "process"
-			}
 		}
 	`
 
@@ -226,7 +212,6 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 						Instances:           types.NullInt{Value: 2},
 						HealthCheckType:     constant.Process,
 						HealthCheckEndpoint: "",
-						HealthCheckTimeout:  112,
 						MemoryInMB:          types.NullUint64{Value: 1024},
 						DiskInMB:            types.NullUint64{Value: 1024},
 					}),
@@ -235,11 +220,10 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "state", "STARTED"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.type", "web"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.instances", "2"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.memory_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "process.0.healthcheck_type", "process"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "process"),
 				),
 			},
 
@@ -396,10 +380,6 @@ func appCheckProcessByType(n string, procType string, expectedProc resources.Pro
 
 		if proc.HealthCheckType != expectedProc.HealthCheckType {
 			return fmt.Errorf("expected the %s proc healthcheck type to be %q but got %q", procType, expectedProc.HealthCheckType, proc.HealthCheckType)
-		}
-
-		if proc.HealthCheckTimeout != expectedProc.HealthCheckTimeout {
-			return fmt.Errorf("expected the %s proc healthcheck timeout to be %q but got %q", procType, expectedProc.HealthCheckTimeout, proc.HealthCheckTimeout)
 		}
 
 		return nil

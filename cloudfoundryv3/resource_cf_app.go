@@ -107,78 +107,45 @@ func resourceApp() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"rolling"}, false),
 			},
 
-			"process": {
-				Description: "Processes define the runnable units of an app. An app can have multiple process types, each with differing commands and scale. Processes for an app are defined by the buildpack used to stage the app and can be customized by including a Procfile in the application source. By default, a newly created app will come with one instance of the web process and all other process types are scaled to zero. Unless otherwise specified, all routes will be mapped to the web process by default",
-				Type:        schema.TypeSet,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Description: "The name of the process type. Set this to 'web' if you don't know what this is.",
-							Type:        schema.TypeString,
-							Default:     "web",
-							Optional:    true,
-						},
-						"command": {
-							Description: "The command used to start the process; this overrides start commands from Procfiles and buildpacks",
-							Type:        schema.TypeString,
-							Optional:    true,
-							Sensitive:   true,
-						},
-						"healthcheck_type": {
-							Description:  "Type of health check to perform; one of: port, process or http",
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "port",
-							ValidateFunc: validation.StringInSlice([]string{"port", "process", "http"}, false),
-						},
-						"healthcheck_endpoint": {
-							Description: "HTTP endpoint called to determine if the app is healthy. (valid only when type is http)",
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "/",
-						},
-						"healthcheck_timeout": {
-							Description: "Time in seconds at which the health-check will report failure",
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Default:     120,
-						},
-						"instances": {
-							Description: "The number of instances of this application process to run",
-							Type:        schema.TypeInt,
-							Required:    true,
-						},
-						"memory_in_mb": {
-							Description:  "The memory limit in mb for all instances of this process",
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      512,
-							ValidateFunc: validation.IntAtLeast(64),
-						},
-						"disk_in_mb": {
-							Description:  "The disk limit in mb allocated per instance",
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      512,
-							ValidateFunc: validation.IntAtLeast(64),
-						},
-					},
-				},
-				Optional: true,
-				Set: func(v interface{}) int {
-					elem := v.(map[string]interface{})
-					return schema.HashString(fmt.Sprintln(
-						elem["type"],
-						elem["command"],
-						elem["instances"],
-						elem["memory_in_mb"],
-						elem["disk_in_mb"],
-						elem["healthcheck_type"],
-						elem["healthcheck_timeout"],
-						elem["healthcheck_endpoint"],
-					))
-				},
-				MinItems: 1,
+			"command": {
+				Description: "The command used to start the process; this overrides start commands from Procfiles and buildpacks",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Sensitive:   true,
+			},
+			"healthcheck_type": {
+				Description:  "Type of health check to perform; one of: port, process or http",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "port",
+				ValidateFunc: validation.StringInSlice([]string{"port", "process", "http"}, false),
+			},
+			"healthcheck_endpoint": {
+				Description: "HTTP endpoint called to determine if the app is healthy. (valid only when type is http)",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+			},
+			"instances": {
+				Description: "The number of instances of this application's web process to run",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     1,
+			},
+			"memory_in_mb": {
+				Description:  "The memory limit in mb for all instances of the web process",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      1024,
+				ValidateFunc: validation.IntAtLeast(64),
+			},
+			"disk_in_mb": {
+				Description:  "The disk limit in mb allocated per instance",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      1024,
+				ValidateFunc: validation.IntAtLeast(64),
 			},
 
 			"service": {
@@ -289,39 +256,10 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{})
 		return diags
 	}
 
-	ps, warns, err := s.ClientV3.GetApplicationProcesses(app.GUID)
-	diags = append(diags, diagFromClient("get-application-processes", warns, err)...)
+	web, warns, err := s.ClientV3.GetApplicationProcessByType(app.GUID, "web")
+	diags = append(diags, diagFromClient("get-web-processes", warns, err)...)
 	if diags.HasError() {
 		return diags
-	}
-	processes := []map[string]interface{}{}
-	processConfigs := d.Get("process").(*schema.Set).List()
-	for _, p := range ps {
-		process := map[string]interface{}{}
-		for _, processConfigRaw := range processConfigs {
-			processConfig := processConfigRaw.(map[string]interface{})
-			if processConfig["type"].(string) == p.Type {
-				process = processConfig
-			}
-		}
-		p, warns, err := s.ClientV3.GetProcess(p.GUID) // command won't be available unless we fetch direct
-		diags = append(diags, diagFromClient("get-application-processes", warns, err)...)
-		if diags.HasError() {
-			return diags
-		}
-		process["type"] = p.Type
-		// process["command"] = p.Command.Value // TODO how can this work? it's computed + but also part of the set hash - ignore for now
-		process["healthcheck_type"] = p.HealthCheckType
-		if p.HealthCheckEndpoint == "" {
-			process["healthcheck_endpoint"] = "/"
-		} else {
-			process["healthcheck_endpoint"] = p.HealthCheckEndpoint
-		}
-		process["healthcheck_timeout"] = int(p.HealthCheckTimeout)
-		process["memory_in_mb"] = int(p.MemoryInMB.Value)
-		process["disk_in_mb"] = int(p.DiskInMB.Value)
-		process["instances"] = p.Instances.Value
-		processes = append(processes, process)
 	}
 
 	droplet, _, _ := s.ClientV3.GetApplicationDropletCurrent(app.GUID)
@@ -331,7 +269,12 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{})
 	_ = d.Set("space_id", app.SpaceGUID)
 	_ = d.Set("state", string(app.State))
 	_ = d.Set("environment", env.EnvironmentVariables)
-	_ = d.Set("process", processes)
+	_ = d.Set("command", web.Command.Value)
+	_ = d.Set("healthcheck_type", string(web.HealthCheckType))
+	_ = d.Set("healthcheck_endpoint", web.HealthCheckEndpoint)
+	_ = d.Set("memory_in_mb", web.MemoryInMB.Value)
+	_ = d.Set("disk_in_mb", web.DiskInMB.Value)
+	_ = d.Set("instances", web.Instances.Value)
 
 	switch app.LifecycleType {
 	case constant.AppLifecycleTypeBuildpack:
@@ -602,6 +545,41 @@ func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest 
 		},
 	}
 
+	if v, ok := d.GetOk("instances"); ok {
+		n := v.(int)
+		manifest.Instances = &n
+	}
+
+	if v, ok := d.GetOk("memory_in_mb"); ok {
+		n := v.(int)
+		manifest.Memory = fmt.Sprintf("%dM", n)
+	}
+
+	if v, ok := d.GetOk("disk_in_mb"); ok {
+		n := v.(int)
+		manifest.DiskQuota = fmt.Sprintf("%dM", n)
+	}
+
+	if v, ok := d.GetOk("healthcheck_type"); ok {
+		s := v.(string)
+		manifest.HealthCheckType = constant.HealthCheckType(s)
+	}
+
+	if manifest.HealthCheckType == constant.HTTP {
+		if v, ok := d.GetOk("healthcheck_endpoint"); ok {
+			s := v.(string)
+			if s == "" {
+				s = "/"
+			}
+			manifest.HealthCheckEndpoint = s
+		}
+	}
+
+	if v, ok := d.GetOk("command"); ok {
+		s := v.(string)
+		manifest.SetStartCommand(s)
+	}
+
 	if lifecycleType == constant.AppLifecycleTypeBuildpack {
 		buildpacks := []string{}
 		if vs, ok := d.GetOk("buildpacks"); ok {
@@ -615,52 +593,6 @@ func buildAppManifest(s *managers.Session, d *schema.ResourceData) (appManifest 
 		manifest.Docker = &manifestparser.Docker{
 			Image: d.Get("docker_image").(string),
 		}
-	}
-
-	processes := d.Get("process").(*schema.Set).List()
-	for _, data := range processes {
-		p := manifestparser.Process{
-			HealthCheckEndpoint: "/",
-			RemainingManifestFields: map[string]interface{}{
-				"command": nil,
-			},
-		}
-		for k, v := range data.(map[string]interface{}) {
-			switch k {
-			case "type":
-				s := v.(string)
-				p.Type = s
-			case "instances":
-				n := v.(int)
-				p.Instances = &n
-			case "memory_in_mb":
-				n := v.(int)
-				p.Memory = fmt.Sprintf("%dM", n)
-			case "disk_in_mb":
-				n := v.(int)
-				p.DiskQuota = fmt.Sprintf("%dM", n)
-			case "command":
-				s := v.(string)
-				p.SetStartCommand(s)
-			case "healthcheck_type":
-				s := v.(string)
-				p.HealthCheckType = constant.HealthCheckType(s)
-			case "healthcheck_endpoint":
-				s := v.(string)
-				if s == "" {
-					s = "/"
-				}
-				p.HealthCheckEndpoint = s
-			case "healthcheck_timeout":
-				n := v.(int)
-				p.HealthCheckTimeout = int64(n)
-			}
-		}
-		// healthcheck endpoint only valid for HTTP type
-		if p.HealthCheckType != constant.HTTP {
-			p.HealthCheckEndpoint = ""
-		}
-		manifest.Processes = append(manifest.Processes, p)
 	}
 
 	return manifest, diags
