@@ -3,11 +3,21 @@
 Experimental implementation of terraform resource for rolling deployments of
 cloudfoundry applications using the v3 API.
 
-
 Long-term intention is to contribute back
 [upstream](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry).
 This is the minimum viable
 chunk to meet our immediate need.
+
+If you have stumbled here, you most likely want
+[the more complete provider from cloudfoundry-community](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry)
+
+## Design goals of this experiment
+
+* Enable use of the V3 "rolling" deployment features now available in cloudfoundry v3+ API
+* Enable use of multiple buildpacks
+* Enable use of sidecars (not yet implemented)
+* Seperate the "application", "package", "build", "deployment" concepts into their own resources so that the provider resources map closer to the cloudfoundry API resources.
+* Decouple the starting of applications from the creation of application resources so that external `depends_on` can be set for things like network policies.
 
 ## Usage
 
