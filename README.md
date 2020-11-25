@@ -3,18 +3,45 @@
 Experimental implementation of terraform resource for rolling deployments of
 cloudfoundry applications using the v3 API.
 
-
 Long-term intention is to contribute back
 [upstream](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry).
 This is the minimum viable
 chunk to meet our immediate need.
+
+If you have stumbled here, you most likely want
+[the more complete provider from cloudfoundry-community](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry)
+
+## Design goals of this experiment
+
+* Enable use of the V3 "rolling" deployment features now available in cloudfoundry v3+ API
+* Enable use of multiple buildpacks
+* Enable use of sidecars (not yet implemented)
+* Seperate the "application", "package", "build", "deployment" concepts into their own resources so that the provider resources map closer to the cloudfoundry API resources.
+* Decouple the starting of applications from the creation of application resources so that external `depends_on` can be set for things like network policies.
 
 ## Usage
 
 See the entry in the [Terraform Registry](https://registry.terraform.io/providers/terraform-provider-cloudfoundry-v3/cloudfoundry-v3/latest)
 
 ```hcl
+terraform {
+  required_providers {
+    cloudfoundry-v3 = {
+      source  = "terraform-provider-cloudfoundry-v3/cloudfoundry-v3"
+      version = "0.333.2"
+    }
+  }
+  required_version = ">= 0.13"
+}
+
+provider "cloudfoundry-v3" {
+  api_url      = var.cf_api_url
+  user         = var.cf_username
+  password     = var.cf_password
+}
+
 resource "cloudfoundry_v3_app" "basic" {
+	provider              = cloudfoundry-v3
 	name                  = "basic-buildpack"
 	space_id              = data.cloudfoundry_v3_space.myspace.id
 	environment           = {MY_VAR = "1"}
@@ -26,15 +53,21 @@ resource "cloudfoundry_v3_app" "basic" {
 }
 
 resource "cloudfoundry_v3_droplet" "basic" {
+	provider         = cloudfoundry-v3
 	app_id           = cloudfoundry_v3_app.basic.id
 	buildpacks       = ["binary_buildpack"]
 	environment      = cloudfoundry_v3_app.basic.environment
 	command          = cloudfoundry_v3_app.basic.command
-	source_code_path = "/path/to/code"
-	source_code_hash = sha1sum(file("/path/to/code"))
+	source_code_path = "/path/to/source.zip"
+	source_code_hash = filemd5("/path/to/source.zip")
+	depends_on = [
+		cloudfoundry_v3_service_binding.dmz_proxy_splunk,
+		cloudfoundry_network_policy.dmz_proxy,
+	]
 }
 
 resource "cloudfoundry_v3_deployment" "basic" {
+	provider   = cloudfoundry-v3
 	strategy   = "rolling"
 	app_id     = cloudfoundry_v3_app.basic.id
 	droplet_id = cloudfoundry_v3_droplet.basic.id

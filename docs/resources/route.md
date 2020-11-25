@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry route resource.
 ---
 
-# cloudfoundry\_route
+# cloudfoundry_route
 
 Provides a Cloud Foundry resource for managing Cloud Foundry application [routes](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html).
 
@@ -44,9 +44,9 @@ The following maps the route to an application.
 - `target` - (Optional, Set) One or more route mapping(s) that will map this route to application(s). Can be repeated multiple times to load balance route traffic among multiple applications.<br/>
 The `target` block supports:
   - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
-  - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port. 
+  - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
 
-~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes.  
+~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes.
 ~> **NOTE:** Resource only handles `target` previously created by resource (i.e. it does not destroy nor modifies target set by other resources like cloudfoundry_application).
 
 ## Attributes Reference
