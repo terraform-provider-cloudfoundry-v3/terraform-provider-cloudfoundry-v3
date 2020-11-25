@@ -24,7 +24,6 @@ func TestAccResAppWithRouting(t *testing.T) {
 		resource "cloudfoundry_v3_app" "foo" {
 			name = "foo-with-route"
 			space_id = %q
-			state = "STOPPED"
 		}
 
 		resource "cloudfoundry_v3_route" "foo" {
@@ -52,7 +51,7 @@ func TestAccResAppWithRouting(t *testing.T) {
 				Config: fmt.Sprintf(src, space.GUID, space.GUID),
 				Check: resource.ComposeTestCheckFunc(
 					appCheckExists("cloudfoundry_v3_app.foo"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "space_id", space.GUID),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "endpoint", "basic-test-route.apps.internal"),
 				),
 			},
 		},
@@ -64,25 +63,29 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 
 	src := `
 		resource "cloudfoundry_v3_app" "basic" {
-			name = "basic-buildpack"
-			space_id = %q
-			state = "STARTED"
+			name                  = "basic-buildpack"
+			space_id              = %q
+			environment           = {VERSION = %q}
+			instances             = %d
+			memory_in_mb          = 1024
+			disk_in_mb            = 1024
+			health_check_type     = "http"
+			health_check_endpoint = "/"
+		}
 
-			lifecycle_type = "buildpack"
-			buildpacks = ["binary_buildpack"]
-
+		resource "cloudfoundry_v3_droplet" "basic" {
+			app_id           = cloudfoundry_v3_app.basic.id
+			buildpacks       = ["binary_buildpack"]
+			environment      = cloudfoundry_v3_app.basic.environment
+			command          = cloudfoundry_v3_app.basic.command
 			source_code_path = %q
 			source_code_hash = %q
+		}
 
-			environment = {
-				VERSION = %q,
-			}
-
-				instances = %d
-				memory_in_mb = 1024
-				disk_in_mb = 1024
-				healthcheck_type = "http"
-				healthcheck_endpoint = "/"
+		resource "cloudfoundry_v3_deployment" "basic" {
+			strategy   = "rolling"
+			app_id     = cloudfoundry_v3_app.basic.id
+			droplet_id = cloudfoundry_v3_droplet.basic.id
 		}
 	`
 
@@ -97,12 +100,12 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 		CheckDestroy: appCheckDestroy,
 		Steps: []resource.TestStep{
 
-			// expect that an application can be deployed based on a specified
+			// Step1: expect that an application can be deployed based on a specified
 			// source zip + buildpack and that the basic process configuration
 			// is reflected
 
 			{
-				Config: fmt.Sprintf(src, space.GUID, appSourceZipPath, "hash1", "1", 2),
+				Config: fmt.Sprintf(src, space.GUID, "1", 2, appSourceZipPath, "hash1"),
 				Check: resource.ComposeTestCheckFunc(
 					appCopyDroplet("cloudfoundry_v3_app.basic", &step1Droplet),
 					appCheckExists("cloudfoundry_v3_app.basic"),
@@ -115,20 +118,19 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 					}),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "name", "basic-buildpack"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "space_id", space.GUID),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "state", "STARTED"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "http"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "http"),
 				),
 			},
 
-			// expect that a change to environment triggers a new build,
+			// Step2: expect that a change to environment triggers a new build,
 			// a new droplet for the app
 
 			{
-				Config: fmt.Sprintf(src, space.GUID, appSourceZipPath, "hash1", "2", 2),
+				Config: fmt.Sprintf(src, space.GUID, "2", 2, appSourceZipPath, "hash1"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "2"),
 					appCopyDroplet("cloudfoundry_v3_app.basic", &step2Droplet),
@@ -136,23 +138,23 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 				),
 			},
 
-			// expect change to source_code_hash to trigger a rebuild of the
+			// Step3: expect change to source_code_hash to trigger a rebuild of the
 			// package and trigger a deployment that changes the current
 			// droplet
 
 			{
-				Config: fmt.Sprintf(src, space.GUID, appSourceZipPath, "hash2", "2", 2),
+				Config: fmt.Sprintf(src, space.GUID, "2", 2, appSourceZipPath, "hash2"),
 				Check: resource.ComposeTestCheckFunc(
 					appCopyDroplet("cloudfoundry_v3_app.basic", &step3Droplet),
 					appCheckDropletNotMatch(&step2Droplet, &step3Droplet),
 				),
 			},
 
-			// expect that a change to process instance scaling should NOT
+			// Step4: expect that a change to process instance scaling should NOT
 			// trigger a deployment or cause droplet change
 
 			{
-				Config: fmt.Sprintf(src, space.GUID, appSourceZipPath, "hash2", "2", 1),
+				Config: fmt.Sprintf(src, space.GUID, "2", 1, appSourceZipPath, "hash2"),
 				Check: resource.ComposeTestCheckFunc(
 					appCopyDroplet("cloudfoundry_v3_app.basic", &step4Droplet),
 					appCheckDropletMatch(&step3Droplet, &step4Droplet),
@@ -174,20 +176,27 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 
 	src := `
 		resource "cloudfoundry_v3_app" "basic" {
-			name = "basic-docker"
-			space_id = %q
-			instances = 2
-			memory_in_mb = 1024
-			disk_in_mb = 1024
-			healthcheck_type = "process"
+			type              = "docker"
+			name              = "basic-docker"
+			space_id          = %q
+			instances         = 2
+			memory_in_mb      = 1024
+			disk_in_mb        = 1024
+			health_check_type = "process"
+			environment       = { VERSION = %q }
+		}
 
-			lifecycle_type = "docker"
+		resource "cloudfoundry_v3_droplet" "basic" {
+			type         = cloudfoundry_v3_app.basic.type
+			app_id       = cloudfoundry_v3_app.basic.id
 			docker_image = "cloudfoundry/diego-docker-app:latest"
+			environment  = cloudfoundry_v3_app.basic.environment
+		}
 
-			environment = {
-				VERSION = %q,
-			}
-
+		resource "cloudfoundry_v3_deployment" "basic" {
+			strategy   = "rolling"
+			app_id     = cloudfoundry_v3_app.basic.id
+			droplet_id = cloudfoundry_v3_droplet.basic.id
 		}
 	`
 
@@ -200,7 +209,7 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 		CheckDestroy: appCheckDestroy,
 		Steps: []resource.TestStep{
 
-			// expect that an application with docker lifecycle type can be deployed based on
+			// Step1: expect that an application with docker lifecycle type can be deployed based on
 			// a docker hub image and that the basic process config is reflected
 
 			{
@@ -217,17 +226,16 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 					}),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "name", "basic-docker"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "space_id", space.GUID),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "state", "STARTED"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
 					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "healthcheck_type", "process"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "process"),
+					resource.TestCheckResourceAttr("cloudfoundry_v3_droplet.basic", "docker_image", "cloudfoundry/diego-docker-app:latest"),
 				),
 			},
 
-			// expect that a change to the environment will trigger a rolling
+			// Step2: expect that a change to the environment will trigger a rolling
 			// restart by creating a new droplet
 
 			{
@@ -375,11 +383,11 @@ func appCheckProcessByType(n string, procType string, expectedProc resources.Pro
 		}
 
 		if proc.HealthCheckEndpoint != expectedProc.HealthCheckEndpoint {
-			return fmt.Errorf("expected %s proc healthcheck endpoint to be %q got %q", procType, expectedProc.HealthCheckEndpoint, proc.HealthCheckEndpoint)
+			return fmt.Errorf("expected %s proc health_check_endpoint to be %q got %q", procType, expectedProc.HealthCheckEndpoint, proc.HealthCheckEndpoint)
 		}
 
 		if proc.HealthCheckType != expectedProc.HealthCheckType {
-			return fmt.Errorf("expected the %s proc healthcheck type to be %q but got %q", procType, expectedProc.HealthCheckType, proc.HealthCheckType)
+			return fmt.Errorf("expected the %s proc health_check_type to be %q but got %q", procType, expectedProc.HealthCheckType, proc.HealthCheckType)
 		}
 
 		return nil

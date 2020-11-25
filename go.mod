@@ -8,13 +8,17 @@ require (
 	code.cloudfoundry.org/cli v0.0.0-20201105145344-e3856be8d239
 	code.cloudfoundry.org/cli-plugin-repo v0.0.0-20201105212819-c5f33c989f5d // indirect
 	code.cloudfoundry.org/rfc5424 v0.0.0-20201103192249-000122071b78 // indirect
+	github.com/ArthurHlt/zipper v1.3.2
 	github.com/Sirupsen/logrus v1.7.0 // indirect
 	github.com/aws/aws-sdk-go v1.31.9 // indirect
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.3.3 // indirect
 	github.com/charlievieth/fs v0.0.1 // indirect
 	github.com/cloudfoundry-community/go-uaa v0.3.1
 	github.com/cloudfoundry/bosh-cli v6.4.1+incompatible // indirect
 	github.com/cloudfoundry/bosh-utils v0.0.0-20201107100218-f523638849f6 // indirect
+	github.com/cloudfoundry/noaa v2.1.1-0.20190110210640-5ce49363dfa6+incompatible
+	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 	github.com/cppforlife/go-patch v0.2.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/docker/docker v1.13.1 // indirect
@@ -22,13 +26,17 @@ require (
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/hashicorp/go-uuid v1.0.1
+	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.6.0 // indirect
+	github.com/hashicorp/terraform-plugin-sdk v1.16.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/moby/moby v1.13.1 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/vito/go-interact v1.0.0 // indirect
 	github.com/zclconf/go-cty v1.5.1 // indirect
