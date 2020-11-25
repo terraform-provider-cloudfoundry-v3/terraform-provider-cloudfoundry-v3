@@ -42,7 +42,7 @@ func resourceServiceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"service_plan": {
+			"service_plan_id": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -53,7 +53,7 @@ func resourceServiceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"json_params": {
+			"params": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "{}",
@@ -64,12 +64,6 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-
-			"recursive_delete": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
 			},
 		},
 	}
@@ -83,7 +77,7 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 		tags = append(tags, v.(string))
 	}
 
-	jsonParameters := d.Get("json_params").(string)
+	jsonParameters := d.Get("params").(string)
 	params := make(map[string]interface{})
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
@@ -95,7 +89,7 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	si := resources.ServiceInstance{
 		Type:            resources.ManagedServiceInstance,
 		Name:            d.Get("name").(string),
-		ServicePlanGUID: d.Get("service_plan").(string),
+		ServicePlanGUID: d.Get("service_plan_id").(string),
 		SpaceGUID:       d.Get("space_id").(string),
 		Tags:            types.NewOptionalStringSlice(tags...),
 		Parameters:      types.NewOptionalObject(params),
@@ -169,9 +163,9 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	_ = d.Set("name", si.Name)
-	_ = d.Set("service_plan", si.ServicePlanGUID)
+	_ = d.Set("service_plan_id", si.ServicePlanGUID)
 	_ = d.Set("space_id", si.SpaceGUID)
-	_ = d.Set("json_params", string(paramsBytes))
+	_ = d.Set("params", string(paramsBytes))
 
 	if si.Tags.IsSet {
 		tags := make([]interface{}, len(si.Tags.Value))
@@ -198,8 +192,8 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	id = d.Id()
 	name = d.Get("name").(string)
-	servicePlan := d.Get("service_plan").(string)
-	jsonParameters := d.Get("json_params").(string)
+	servicePlan := d.Get("service_plan_id").(string)
+	jsonParameters := d.Get("params").(string)
 
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
@@ -275,7 +269,7 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 // 	}
 
 // 	d.Set("name", serviceinstance.Name)
-// 	d.Set("service_plan", serviceinstance.ServicePlanGUID)
+// 	d.Set("service_plan_id", serviceinstance.ServicePlanGUID)
 // 	d.Set("space_id", serviceinstance.SpaceGUID)
 // 	d.Set("tags", serviceinstance.Tags)
 

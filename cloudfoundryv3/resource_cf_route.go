@@ -72,7 +72,7 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	d.SetId(route.GUID)
-	return diags
+	return resourceRouteRead(ctx, d, meta)
 }
 
 func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interface{}) (diags diag.Diagnostics) {

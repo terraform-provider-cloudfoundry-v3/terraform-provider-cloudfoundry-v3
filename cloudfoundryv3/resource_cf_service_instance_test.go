@@ -32,7 +32,7 @@ func TestAccResServiceInstancesWithAsyncPlan(t *testing.T) {
 						resource "cloudfoundry_v3_service_instance" "async" {
 						  name = "async"
 						  space_id = "%s"
-						  service_plan = "%s"
+						  service_plan_id = "%s"
 						}
 					`, space.GUID, servicePlan.GUID),
 					Check: resource.ComposeTestCheckFunc(
