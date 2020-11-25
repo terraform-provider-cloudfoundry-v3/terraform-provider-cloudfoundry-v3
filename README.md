@@ -61,8 +61,8 @@ resource "cloudfoundry_v3_droplet" "basic" {
 	source_code_path = "/path/to/source.zip"
 	source_code_hash = filemd5("/path/to/source.zip")
 	depends_on = [
-		cloudfoundry_v3_service_binding.dmz_proxy_splunk,
-		cloudfoundry_network_policy.dmz_proxy,
+		cloudfoundry_v3_service_binding.splunk,
+		cloudfoundry_network_policy.basic,
 	]
 }
 
