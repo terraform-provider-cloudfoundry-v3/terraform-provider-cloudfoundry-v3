@@ -82,3 +82,35 @@ requires for release were too broad, so the release process is bit funky...
 * Merge to master in this repo trigger a sync to master on a repo outside the alphagov org [here](https://github.com/terraform-provider-cloudfoundry-v3/terraform-provider-cloudfoundry-v3)
 * Creating a tag in this repo of the form `v0.333.X` will trigger a Github Action that performs the release: [see here](https://github.com/terraform-provider-cloudfoundry-v3/terraform-provider-cloudfoundry-v3/actions)
 * The Terraform Registry entry will automatically get updated [here](https://registry.terraform.io/providers/terraform-provider-cloudfoundry-v3/cloudfoundry-v3/latest)
+
+## Running tests
+
+It's a bit of a hack right now, and you need a cloudfoundry deployment to test against..
+
+Most of the env vars should be guessable, but for TEST_SERVICE_NAME /
+TEST_SERVICE_PLAN_NAME: You will need to `cf push` the "fake broker" in
+tests/ dir with the name `async-broker`,  and do `create-service-broker`
+pointing to the pushed app's route and using admin/admin as creds ... then
+get the service name and plan name from the `cf marketplace` or hitting
+/v2/catalog on the broker app
+
+Run:
+
+```
+TEST_ORG_NAME=test \
+TEST_SPACE_NAME=test \
+CF_API_URL=https://your.cf.env \
+CF_USER=admin \
+CF_PASSWORD=<secret> \
+CF_UAA_CLIENT_ID=admin \
+CF_UAA_CLIENT_SECRET=<secret> \
+CF_CA_CERT="" \
+CF_SKIP_SSL_VALIDATION=true \
+TEST_DOMAIN_NAME=autom8.dev.cloudpipeline.digital \
+TF_ACC=1 \
+TEST_SERVICE_NAME=fake-service-ecf60c6f-b2ba-4ecf-9e4a-35683929f6b0 \
+TEST_SERVICE_PLAN_NAME=fake-async-plan \
+TEST_SERVICE_BROKER_NAME=async-broker \
+go test -v -timeout 120m -gcflags="-e" ./cloudfoundryv3
+```
+
