@@ -16,7 +16,7 @@ func TestAccResServiceInstancesWithAsyncPlan(t *testing.T) {
 	space := testAccEnv.Space
 	servicePlan := testAccEnv.ServicePlan
 
-	refFakeAsyncPlan := "cloudfoundry_v3_service_instance.async"
+	refFakeAsyncPlan := "cloudfoundry_service_instance.async"
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -29,7 +29,7 @@ func TestAccResServiceInstancesWithAsyncPlan(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					Config: fmt.Sprintf(`
-						resource "cloudfoundry_v3_service_instance" "async" {
+						resource "cloudfoundry_service_instance" "async" {
 						  name = "async"
 						  space_id = "%s"
 						  service_plan_id = "%s"

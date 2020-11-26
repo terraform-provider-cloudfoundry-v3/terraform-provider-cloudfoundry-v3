@@ -16,14 +16,14 @@ The following example creates an application. The created application is
 stopped and it does not stage or deploy your application source.
 
 To build your application droplet and have it deployed to your application
-see the `cloudfoundry_v3_droplet` and `cloudfoundry_v3_deployment`
+see the `cloudfoundry_droplet` and `cloudfoundry_deployment`
 resources.
 
 ```hcl
-resource "cloudfoundry_v3_app" "basic" {
+resource "cloudfoundry_app" "basic" {
 	provider              = cloudfoundry-v3
 	name                  = "basic-buildpack"
-	space_id              = data.cloudfoundry_v3_space.myspace.id
+	space_id              = data.cloudfoundry_space.myspace.id
 	environment           = {MY_VAR = "1"}
 	instances             = 2
 	memory_in_mb          = 1024

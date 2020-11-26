@@ -13,13 +13,13 @@ import (
 
 func TestAccDataSourceSpace_normal(t *testing.T) {
 
-	ref := "data.cloudfoundry_v3_space.default"
+	ref := "data.cloudfoundry_space.default"
 
 	org := testAccEnv.Organization
 	space := testAccEnv.Space
 
 	src := `
-		data "cloudfoundry_v3_space" "default" {
+		data "cloudfoundry_space" "default" {
 			name = %q
 			org_name = %q
 		}

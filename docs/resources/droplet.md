@@ -1,6 +1,6 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_v3_droplet"
+page_title: "Cloud Foundry: cloudfoundry_droplet"
 sidebar_current: "docs-cf-resource-droplet"
 description: |-
   Provides a Cloud Foundry Droplet resource.
@@ -15,10 +15,10 @@ Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/de
 The following example creates a droplet (package of your built/staged application.
 
 ```hcl
-resource "cloudfoundry_v3_app" "basic" {
+resource "cloudfoundry_app" "basic" {
 	provider              = cloudfoundry-v3
 	name                  = "basic-buildpack"
-	space_id              = data.cloudfoundry_v3_space.myspace.id
+	space_id              = data.cloudfoundry_space.myspace.id
 	environment           = {MY_VAR = "1"}
 	instances             = 2
 	memory_in_mb          = 1024
@@ -27,12 +27,12 @@ resource "cloudfoundry_v3_app" "basic" {
 	health_check_endpoint = "/"
 }
 
-resource "cloudfoundry_v3_droplet" "basic" {
+resource "cloudfoundry_droplet" "basic" {
 	provider         = cloudfoundry-v3
-	app_id           = cloudfoundry_v3_app.basic.id
+	app_id           = cloudfoundry_app.basic.id
 	buildpacks       = ["binary_buildpack"]
-	environment      = cloudfoundry_v3_app.basic.environment
-	command          = cloudfoundry_v3_app.basic.command
+	environment      = cloudfoundry_app.basic.environment
+	command          = cloudfoundry_app.basic.command
 	source_code_path = "/path/to/source.zip"
 	source_code_hash = filemd5("/path/to/source.zip")
 }
@@ -48,8 +48,8 @@ The following arguments are supported:
    * a Git URL (e.g. https://github.com/cloudfoundry/java-buildpack.git) or a Git URL with a branch or tag (e.g. https://github.com/cloudfoundry/java-buildpack.git#v3.3.0 for v3.3.0 tag)
    * an installed admin buildpack name (e.g. my-buildpack)
    * an empty blank string to use built-in buildpacks (i.e. autodetection)
-* `command` - (Optional, String) A custom start command for the application. (this is only used to trigger rebuild/deployment - it should be set to the output attribute from the `cloudfoundry_v3_app` resource.
-* `environment` - (Optional, String) A custom build environment for the application. (this is only used to trigger rebuild/deployment - it should be set to the output attribute from the `cloudfoundry_v3_app` resource.
+* `command` - (Optional, String) A custom start command for the application. (this is only used to trigger rebuild/deployment - it should be set to the output attribute from the `cloudfoundry_app` resource.
+* `environment` - (Optional, String) A custom build environment for the application. (this is only used to trigger rebuild/deployment - it should be set to the output attribute from the `cloudfoundry_app` resource.
 * `source_code_path` - (Required) An uri or path to target a zip file. this can be in the form of unix path (`/my/path.zip`) or url path (`http://zip.com/my.zip`)
 * `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `${base64sha256(file("file.zip"))}`,
 where "file.zip" is the local filename of the lambda function source archive.
@@ -70,7 +70,7 @@ resource "zipper_file" "fixture" {
   output_path = "path/to/gobis-server.zip"
 }
 
-resource "cloudfoundry_v3_app" "gobis-server" {
+resource "cloudfoundry_app" "gobis-server" {
     name = "gobis-server"
     source_code_path = zipper_file.fixture.output_path
     source_code_hash = zipper_file.fixture.output_sha

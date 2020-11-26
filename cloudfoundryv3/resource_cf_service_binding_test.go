@@ -14,21 +14,21 @@ func TestAccResServiceBindingWithAsyncPlan(t *testing.T) {
 
 	src := `
 
-		resource "cloudfoundry_v3_app" "bind" {
+		resource "cloudfoundry_app" "bind" {
 			type = "buildpack"
 			name = "foo-with-binding"
 			space_id = %q
 		}
 
-		resource "cloudfoundry_v3_service_instance" "bind" {
+		resource "cloudfoundry_service_instance" "bind" {
 		  name = "bind"
 		  space_id = %q
 		  service_plan_id = %q
 		}
 
-		resource "cloudfoundry_v3_service_binding" "bind" {
-			app_id = cloudfoundry_v3_app.bind.id
-			service_instance_id = cloudfoundry_v3_service_instance.bind.id
+		resource "cloudfoundry_service_binding" "bind" {
+			app_id = cloudfoundry_app.bind.id
+			service_instance_id = cloudfoundry_service_instance.bind.id
 			params = jsonencode({
 				ignored = true
 			})
@@ -36,7 +36,7 @@ func TestAccResServiceBindingWithAsyncPlan(t *testing.T) {
 
 	`
 
-	refFakeAsyncPlan := "cloudfoundry_v3_service_instance.bind"
+	refFakeAsyncPlan := "cloudfoundry_service_instance.bind"
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },

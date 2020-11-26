@@ -17,24 +17,24 @@ func TestAccResAppWithRouting(t *testing.T) {
 
 	src := `
 
-		data "cloudfoundry_v3_domain" "foo" {
+		data "cloudfoundry_domain" "foo" {
 		  name = "apps.internal"
 		}
 
-		resource "cloudfoundry_v3_app" "foo" {
+		resource "cloudfoundry_app" "foo" {
 			name = "foo-with-route"
 			space_id = %q
 		}
 
-		resource "cloudfoundry_v3_route" "foo" {
-			domain_id = data.cloudfoundry_v3_domain.foo.id
+		resource "cloudfoundry_route" "foo" {
+			domain_id = data.cloudfoundry_domain.foo.id
 			space_id = %q
 			host = "basic-test-route"
 		}
 
-		resource "cloudfoundry_v3_route_destination" "foo" {
-			route_id = cloudfoundry_v3_route.foo.id
-			app_id = cloudfoundry_v3_app.foo.id
+		resource "cloudfoundry_route_destination" "foo" {
+			route_id = cloudfoundry_route.foo.id
+			app_id = cloudfoundry_app.foo.id
 		}
 
 	`
@@ -50,8 +50,8 @@ func TestAccResAppWithRouting(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, space.GUID),
 				Check: resource.ComposeTestCheckFunc(
-					appCheckExists("cloudfoundry_v3_app.foo"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_route.foo", "endpoint", "basic-test-route.apps.internal"),
+					appCheckExists("cloudfoundry_app.foo"),
+					resource.TestCheckResourceAttr("cloudfoundry_route.foo", "endpoint", "basic-test-route.apps.internal"),
 				),
 			},
 		},
@@ -62,7 +62,7 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 	appSourceZipPath := testAccEnv.AssetPath("dummy-app.zip")
 
 	src := `
-		resource "cloudfoundry_v3_app" "basic" {
+		resource "cloudfoundry_app" "basic" {
 			name                  = "basic-buildpack"
 			space_id              = %q
 			environment           = {VERSION = %q}
@@ -73,19 +73,19 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 			health_check_endpoint = "/"
 		}
 
-		resource "cloudfoundry_v3_droplet" "basic" {
-			app_id           = cloudfoundry_v3_app.basic.id
+		resource "cloudfoundry_droplet" "basic" {
+			app_id           = cloudfoundry_app.basic.id
 			buildpacks       = ["binary_buildpack"]
-			environment      = cloudfoundry_v3_app.basic.environment
-			command          = cloudfoundry_v3_app.basic.command
+			environment      = cloudfoundry_app.basic.environment
+			command          = cloudfoundry_app.basic.command
 			source_code_path = %q
 			source_code_hash = %q
 		}
 
-		resource "cloudfoundry_v3_deployment" "basic" {
+		resource "cloudfoundry_deployment" "basic" {
 			strategy   = "rolling"
-			app_id     = cloudfoundry_v3_app.basic.id
-			droplet_id = cloudfoundry_v3_droplet.basic.id
+			app_id     = cloudfoundry_app.basic.id
+			droplet_id = cloudfoundry_droplet.basic.id
 		}
 	`
 
@@ -107,22 +107,22 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "1", 2, appSourceZipPath, "hash1"),
 				Check: resource.ComposeTestCheckFunc(
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step1Droplet),
-					appCheckExists("cloudfoundry_v3_app.basic"),
-					appCheckProcessByType("cloudfoundry_v3_app.basic", "web", resources.Process{
+					appCopyDroplet("cloudfoundry_app.basic", &step1Droplet),
+					appCheckExists("cloudfoundry_app.basic"),
+					appCheckProcessByType("cloudfoundry_app.basic", "web", resources.Process{
 						HealthCheckType:     constant.HTTP,
 						Instances:           types.NullInt{Value: 2},
 						HealthCheckEndpoint: "/",
 						MemoryInMB:          types.NullUint64{Value: 1024},
 						DiskInMB:            types.NullUint64{Value: 1024},
 					}),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "name", "basic-buildpack"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "space_id", space.GUID),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "http"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "name", "basic-buildpack"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "space_id", space.GUID),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "environment.VERSION", "1"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "instances", "2"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "memory_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "disk_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "health_check_type", "http"),
 				),
 			},
 
@@ -132,8 +132,8 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "2", 2, appSourceZipPath, "hash1"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "2"),
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step2Droplet),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "environment.VERSION", "2"),
+					appCopyDroplet("cloudfoundry_app.basic", &step2Droplet),
 					appCheckDropletNotMatch(&step1Droplet, &step2Droplet),
 				),
 			},
@@ -145,7 +145,7 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "2", 2, appSourceZipPath, "hash2"),
 				Check: resource.ComposeTestCheckFunc(
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step3Droplet),
+					appCopyDroplet("cloudfoundry_app.basic", &step3Droplet),
 					appCheckDropletNotMatch(&step2Droplet, &step3Droplet),
 				),
 			},
@@ -156,9 +156,9 @@ func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "2", 1, appSourceZipPath, "hash2"),
 				Check: resource.ComposeTestCheckFunc(
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step4Droplet),
+					appCopyDroplet("cloudfoundry_app.basic", &step4Droplet),
 					appCheckDropletMatch(&step3Droplet, &step4Droplet),
-					appCheckProcessByType("cloudfoundry_v3_app.basic", "web", resources.Process{
+					appCheckProcessByType("cloudfoundry_app.basic", "web", resources.Process{
 						HealthCheckType:     constant.HTTP,
 						Instances:           types.NullInt{Value: 1},
 						HealthCheckEndpoint: "/",
@@ -175,7 +175,7 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 	space := testAccEnv.Space
 
 	src := `
-		resource "cloudfoundry_v3_app" "basic" {
+		resource "cloudfoundry_app" "basic" {
 			type              = "docker"
 			name              = "basic-docker"
 			space_id          = %q
@@ -186,17 +186,17 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 			environment       = { VERSION = %q }
 		}
 
-		resource "cloudfoundry_v3_droplet" "basic" {
-			type         = cloudfoundry_v3_app.basic.type
-			app_id       = cloudfoundry_v3_app.basic.id
+		resource "cloudfoundry_droplet" "basic" {
+			type         = cloudfoundry_app.basic.type
+			app_id       = cloudfoundry_app.basic.id
 			docker_image = "cloudfoundry/diego-docker-app:latest"
-			environment  = cloudfoundry_v3_app.basic.environment
+			environment  = cloudfoundry_app.basic.environment
 		}
 
-		resource "cloudfoundry_v3_deployment" "basic" {
+		resource "cloudfoundry_deployment" "basic" {
 			strategy   = "rolling"
-			app_id     = cloudfoundry_v3_app.basic.id
-			droplet_id = cloudfoundry_v3_droplet.basic.id
+			app_id     = cloudfoundry_app.basic.id
+			droplet_id = cloudfoundry_droplet.basic.id
 		}
 	`
 
@@ -215,23 +215,23 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "1"),
 				Check: resource.ComposeTestCheckFunc(
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step1Droplet),
-					appCheckExists("cloudfoundry_v3_app.basic"),
-					appCheckProcessByType("cloudfoundry_v3_app.basic", "web", resources.Process{
+					appCopyDroplet("cloudfoundry_app.basic", &step1Droplet),
+					appCheckExists("cloudfoundry_app.basic"),
+					appCheckProcessByType("cloudfoundry_app.basic", "web", resources.Process{
 						Instances:           types.NullInt{Value: 2},
 						HealthCheckType:     constant.Process,
 						HealthCheckEndpoint: "",
 						MemoryInMB:          types.NullUint64{Value: 1024},
 						DiskInMB:            types.NullUint64{Value: 1024},
 					}),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "name", "basic-docker"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "space_id", space.GUID),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "1"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "instances", "2"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "memory_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "disk_in_mb", "1024"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "health_check_type", "process"),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_droplet.basic", "docker_image", "cloudfoundry/diego-docker-app:latest"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "name", "basic-docker"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "space_id", space.GUID),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "environment.VERSION", "1"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "instances", "2"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "memory_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "disk_in_mb", "1024"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "health_check_type", "process"),
+					resource.TestCheckResourceAttr("cloudfoundry_droplet.basic", "docker_image", "cloudfoundry/diego-docker-app:latest"),
 				),
 			},
 
@@ -241,9 +241,9 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 			{
 				Config: fmt.Sprintf(src, space.GUID, "2"),
 				Check: resource.ComposeTestCheckFunc(
-					appCopyDroplet("cloudfoundry_v3_app.basic", &step2Droplet),
+					appCopyDroplet("cloudfoundry_app.basic", &step2Droplet),
 					appCheckDropletNotMatch(&step1Droplet, &step2Droplet),
-					resource.TestCheckResourceAttr("cloudfoundry_v3_app.basic", "environment.VERSION", "2"),
+					resource.TestCheckResourceAttr("cloudfoundry_app.basic", "environment.VERSION", "2"),
 				),
 			},
 		},
@@ -253,7 +253,7 @@ func TestAccResAppDockerRollingDeployment(t *testing.T) {
 func appCheckDestroy(s *terraform.State) error {
 	errs := []error{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "cloudfoundry_v3_app" {
+		if rs.Type != "cloudfoundry_app" {
 			continue
 		}
 
