@@ -85,19 +85,19 @@ func Provider() *schema.Provider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"cloudfoundry_v3_domain": dataSourceDomain(),
-			"cloudfoundry_v3_org":    dataSourceOrg(),
-			"cloudfoundry_v3_space":  dataSourceSpace(),
+			"cloudfoundry_domain": dataSourceDomain(),
+			"cloudfoundry_org":    dataSourceOrg(),
+			"cloudfoundry_space":  dataSourceSpace(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"cloudfoundry_v3_route":             resourceRoute(),
-			"cloudfoundry_v3_route_destination": resourceRouteDestination(),
-			"cloudfoundry_v3_app":               resourceApp(),
-			"cloudfoundry_v3_droplet":           resourceDroplet(),
-			"cloudfoundry_v3_deployment":        resourceDeployment(),
-			"cloudfoundry_v3_service_instance":  resourceServiceInstance(),
-			"cloudfoundry_v3_service_binding":   resourceServiceBinding(),
+			"cloudfoundry_route":             resourceRoute(),
+			"cloudfoundry_route_destination": resourceRouteDestination(),
+			"cloudfoundry_app":               resourceApp(),
+			"cloudfoundry_droplet":           resourceDroplet(),
+			"cloudfoundry_deployment":        resourceDeployment(),
+			"cloudfoundry_service_instance":  resourceServiceInstance(),
+			"cloudfoundry_service_binding":   resourceServiceBinding(),
 		},
 
 		ConfigureContextFunc: providerConfigure,

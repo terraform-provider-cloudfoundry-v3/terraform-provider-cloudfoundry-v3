@@ -1,12 +1,12 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_v3_route_destination"
+page_title: "Cloud Foundry: cloudfoundry_route_destination"
 sidebar_current: "docs-cf-resource-route-destination"
 description: |-
   Provides a Cloud Foundry Route Destination resource.
 ---
 
-# cloudfoundry_v3_route_destination
+# cloudfoundry_route_destination
 
 Provides the mapping between a `route` and `app` resource so that traffic
 is routed to the application process from the route.
@@ -17,24 +17,24 @@ The following example creates an application with a route and maps the route
 
 ```hcl
 
-data "cloudfoundry_v3_domain" "foo" {
+data "cloudfoundry_domain" "foo" {
   name = "apps.internal"
 }
 
-resource "cloudfoundry_v3_app" "foo" {
+resource "cloudfoundry_app" "foo" {
 	name = "foo-with-route"
 	# ...
 }
 
-resource "cloudfoundry_v3_route" "foo" {
-	domain_id = data.cloudfoundry_v3_domain.foo.id
+resource "cloudfoundry_route" "foo" {
+	domain_id = data.cloudfoundry_domain.foo.id
 	space_id = "xxxx"
 	host = "basic-test-route"
 }
 
-resource "cloudfoundry_v3_route_destination" "foo" {
-	route_id = cloudfoundry_v3_route.foo.id
-	app_id = cloudfoundry_v3_app.foo.id
+resource "cloudfoundry_route_destination" "foo" {
+	route_id = cloudfoundry_route.foo.id
+	app_id = cloudfoundry_app.foo.id
 }
 ```
 

@@ -13,11 +13,11 @@ import (
 
 func TestAccDataSourceOrg_normal(t *testing.T) {
 
-	ref := "data.cloudfoundry_v3_org.dd"
+	ref := "data.cloudfoundry_org.dd"
 	org := testAccEnv.Organization
 
 	src := `
-		data "cloudfoundry_v3_org" "dd" {
+		data "cloudfoundry_org" "dd" {
 			name = %q
 		}
 	`

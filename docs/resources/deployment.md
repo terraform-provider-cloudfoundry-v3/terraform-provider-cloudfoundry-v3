@@ -1,12 +1,12 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_v3_deployment"
+page_title: "Cloud Foundry: cloudfoundry_deployment"
 sidebar_current: "docs-cf-resource-deployment"
 description: |-
   Provides a Cloud Foundry Deployment resource.
 ---
 
-# cloudfoundry_v3_deployment
+# cloudfoundry_deployment
 
 Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/deploy-apps/deploy-app.html) resource.
 
@@ -15,10 +15,10 @@ Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/de
 The following example creates an application, stages a droplet and deploys it with the "rolling" (zero downtime) strategy.
 
 ```hcl
-resource "cloudfoundry_v3_app" "basic" {
+resource "cloudfoundry_app" "basic" {
 	provider              = cloudfoundry-v3
 	name                  = "basic-buildpack"
-	space_id              = data.cloudfoundry_v3_space.myspace.id
+	space_id              = data.cloudfoundry_space.myspace.id
 	environment           = {MY_VAR = "1"}
 	instances             = 2
 	memory_in_mb          = 1024
@@ -27,21 +27,21 @@ resource "cloudfoundry_v3_app" "basic" {
 	health_check_endpoint = "/"
 }
 
-resource "cloudfoundry_v3_droplet" "basic" {
+resource "cloudfoundry_droplet" "basic" {
 	provider         = cloudfoundry-v3
-	app_id           = cloudfoundry_v3_app.basic.id
+	app_id           = cloudfoundry_app.basic.id
 	buildpacks       = ["binary_buildpack"]
-	environment      = cloudfoundry_v3_app.basic.environment
-	command          = cloudfoundry_v3_app.basic.command
+	environment      = cloudfoundry_app.basic.environment
+	command          = cloudfoundry_app.basic.command
 	source_code_path = "/path/to/source.zip"
 	source_code_hash = filemd5("/path/to/source.zip")
 }
 
-resource "cloudfoundry_v3_deployment" "basic" {
+resource "cloudfoundry_deployment" "basic" {
 	provider   = cloudfoundry-v3
 	strategy   = "rolling"
-	app_id     = cloudfoundry_v3_app.basic.id
-	droplet_id = cloudfoundry_v3_droplet.basic.id
+	app_id     = cloudfoundry_app.basic.id
+	droplet_id = cloudfoundry_droplet.basic.id
 }
 ```
 
