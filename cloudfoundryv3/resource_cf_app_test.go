@@ -2,6 +2,7 @@ package cloudfoundry_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -57,6 +58,63 @@ func TestAccResAppWithRouting(t *testing.T) {
 		},
 	})
 }
+
+func TestEnvValidationEmptyStrings(t *testing.T) {
+	space := testAccEnv.Space
+
+	src := `
+		resource "cloudfoundry_app" "foo" {
+			space_id = %q
+			name = "foo-bar"
+			environment = {
+				BAZ = "one"
+				QUX = ""
+			}
+		}
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     testAccPreCheck(t),
+		Providers:    testAccProviders,
+		CheckDestroy: appCheckDestroy,
+		Steps: []resource.TestStep{
+
+			{
+				Config: fmt.Sprintf(src, space.GUID),
+				ExpectError: regexp.MustCompile(`"QUX": Cannot set environment variables to empty strings`),
+			},
+		},
+	})
+}
+
+func TestEnvValidationVCAP(t *testing.T) {
+	space := testAccEnv.Space
+
+	src := `
+		resource "cloudfoundry_app" "foo" {
+			space_id = %q
+			name = "foo-bar"
+			environment = {
+				BAZ = "one"
+				VCAP_QUX = "two"
+			}
+		}
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     testAccPreCheck(t),
+		Providers:    testAccProviders,
+		CheckDestroy: appCheckDestroy,
+		Steps: []resource.TestStep{
+
+			{
+				Config: fmt.Sprintf(src, space.GUID),
+				ExpectError: regexp.MustCompile(`Environment variables starting with VCAP_ are reserved`),
+			},
+		},
+	})
+}
+
 func TestAccResAppBuildpackRollingDeployment(t *testing.T) {
 	space := testAccEnv.Space
 	appSourceZipPath := testAccEnv.AssetPath("dummy-app.zip")
