@@ -65,8 +65,19 @@ def uniquify_config
 end
 
 def push_broker(broker_name, domain)
+  puts "Generating manifest"
+  File.open('manifest.yml', 'w') do |file|
+    contents = <<~ENDMANIFEST
+      ---
+        applications:
+        - name: #{broker_name}
+          routes:
+          - route: #{broker_name}.#{domain}
+    ENDMANIFEST
+    file.write(contents)
+  end
   puts "Pushing the broker"
-  IO.popen("cf push #{broker_name} -d #{domain}") do |cmd_output|
+  IO.popen("cf push #{broker_name}") do |cmd_output|
     cmd_output.each { |line| puts line }
   end
   puts

@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -120,12 +119,12 @@ func resourceApp() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Sensitive:   true,
+				ValidateFunc: validation.All(
+					validateEnvMapKeysPattern,
+					validateEnvMapEmptyStrings,
+				),
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
-					ValidateFunc: validation.StringDoesNotMatch(
-						regexp.MustCompile(`(^VCAP_|^PORT$)`),
-						"Environment variables named 'PORT' or starting with 'VCAP_' are reserved",
-					),
 				},
 			},
 		},
