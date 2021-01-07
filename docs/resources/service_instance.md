@@ -21,8 +21,8 @@ data "cloudfoundry_service" "redis" {
 
 resource "cloudfoundry_service_instance" "redis1" {
   name = "pricing-grid"
-  space = cloudfoundry_space.dev.id
-  service_plan = data.cloudfoundry_service.redis.service_plans["shared-vm"]
+  space_id = cloudfoundry_space.dev.id
+  service_plan_id = data.cloudfoundry_service.redis.service_plans["shared-vm"]
 }
 ```
 
@@ -31,11 +31,10 @@ resource "cloudfoundry_service_instance" "redis1" {
 The following arguments are supported:
 
 * `name` - (Required, String) The name of the Service Instance in Cloud Foundry
-* `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service.html)
-* `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html)
-* `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request. By default, no params are provided.
+* `service_plan_id` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service.html)
+* `space_id` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html)
+* `params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request. By default, no params are provided.
 * `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES). By default, no tags are assigned.
-* `recursive_delete` - (Optional, Bool) Default: `false`. If set `true`, Cloud Foundry will delete any service bindings, service keys, and route mappings associated with the service instance. This flag should only be set when such dependent resources were provisioned outside of terraform, and need removal to enable deletion of the associated service instance.
 
 ## Attributes Reference
 

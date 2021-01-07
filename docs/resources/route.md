@@ -16,9 +16,9 @@ The following example creates an route for an application.
 
 ```hcl
 resource "cloudfoundry_route" "default" {
-    domain = data.cloudfoundry_domain.apps.domain.id
-    space = data.cloudfoundry_space.dev.id
-    hostname = "myapp"
+    domain_id = data.cloudfoundry_domain.apps.domain.id
+    space_id = data.cloudfoundry_space.dev.id
+    host = "myapp"
 }
 ```
 
@@ -26,17 +26,9 @@ resource "cloudfoundry_route" "default" {
 
 The following arguments are supported:
 
-- `domain` - (Required, String) The ID of the domain to map the host name to. If not provided the default application domain will be used.
-- `space` - (Required, String) The ID of the space to create the route in.
-- `hostname` - (Required, Optional) The application's host name. This is required for shared domains.
-
-The following arguments apply only to TCP routes.
-
-- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `random_port`.
-- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `port` and defaults to false.
-
-The following argument applies only to HTTP routes.
-
+- `domain_id` - (Required, String) The ID of the domain to map the host name to. If not provided the default application domain will be used.
+- `space_id` - (Required, String) The ID of the space to create the route in.
+- `host` - (Required, Optional) The application's host name. This is required for shared domains.
 - `path` - (Optional) A path for a HTTP route.
 
 The following maps the route to an application.

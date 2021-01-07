@@ -39,12 +39,15 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the application.
 * `space_id` - (Required) The GUID of the associated Cloud Foundry space.
+* `type` - (Optional, String) The lifecycle type of the application. There are two types (lifecycles) of cloudfoundry application builds, 'buildpack' and 'docker'. Default is `buildpack`.
 * `instances` - (Optional, Number) The number of app instances that you want to start. Defaults to 1.
 * `memory_in_mb` - (Optional, Number) The memory limit for each application instance in megabytes. If not provided, value is computed and retreived from Cloud Foundry.
 * `disk_in_mb` - (Optional, Number) The disk space to be allocated for each application instance in megabytes. If not provided, default disk quota is retrieved from Cloud Foundry and assigned.
 * `command` - (Optional, String) A custom start command for the application's web process. This overrides the start command provided by the buildpack.
 * `health_check_type` - (Optional, String) One of `port`, `process` or `http`
 * `health_check_endpoint` - (Optional, String) defaults to "/" set to a path to your healthcheck (only valid for `http` type checks)
+* `health_check_timeout` - (Optional, Number) The timeout in seconds for the health check.
+* `strategy` - (Optional) The deployment method. Currently only `rolling` supported.
 * `environment` - (Optional, map of String to string) environment variables for your application processes.
 
 

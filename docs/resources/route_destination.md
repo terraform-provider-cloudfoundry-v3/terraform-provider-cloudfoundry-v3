@@ -44,12 +44,9 @@ The following arguments are supported:
 
 * `app_id` - (Required) The GUID of the associated Cloud Foundry application.
 * `route_id` - (Required) The GUID of the associated Cloud Foundry route.
-* `process_type` - (Optional) The name of the process type within the application to route to. (default: `web`)
-
 
 ## Attributes Reference
 
 The following attributes are exported along with any defaults for the inputs attributes.
 
 * `id` - The GUID of the application
-
