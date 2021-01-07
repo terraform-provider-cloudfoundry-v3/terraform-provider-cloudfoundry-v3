@@ -39,7 +39,7 @@ func resourceApp() *schema.Resource {
 			},
 
 			"type": {
-				Description:  "The lifecycle type of the application. There are two types (lifecycles) of cloudfoundry application builds, 'buildpack' and 'docker'. For buildpack source types, you must supply `source_code_path` to a zip of application source code. For the 'docker' source type, you must supply the `docker_image`.",
+				Description:  "The lifecycle type of the application. There are two types (lifecycles) of cloudfoundry application builds, 'buildpack' and 'docker'.",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "buildpack",

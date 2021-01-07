@@ -52,4 +52,3 @@ The following arguments are supported:
 * `app_id` - (Required) The GUID of the associated Cloud Foundry application
 * `droplet_id` - (Required) The GUID of the application droplet to deploy.
 * `strategy` - (Required) The deployment method. Currently only `rolling` supported.
-
