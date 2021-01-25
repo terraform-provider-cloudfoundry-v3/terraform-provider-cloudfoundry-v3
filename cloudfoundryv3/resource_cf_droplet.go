@@ -49,7 +49,7 @@ func resourceDroplet() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ValidateFunc:  validation.StringIsNotEmpty,
-				ConflictsWith: []string{"docker_image"},
+				ConflictsWith: []string{"docker_image", "docker_username", "docker_password"},
 				ForceNew:      true,
 			},
 
@@ -58,7 +58,7 @@ func resourceDroplet() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ValidateFunc:  validation.StringIsNotEmpty,
-				ConflictsWith: []string{"docker_image"},
+				ConflictsWith: []string{"docker_image", "docker_username", "docker_password"},
 				ForceNew:      true,
 			},
 
@@ -69,7 +69,7 @@ func resourceDroplet() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"docker_image"},
+				ConflictsWith: []string{"docker_image", "docker_username", "docker_password"},
 				ForceNew:      true,
 			},
 
@@ -79,7 +79,7 @@ func resourceDroplet() *schema.Resource {
 				Optional:      true,
 				Default:       "cflinuxfs3",
 				ValidateFunc:  validation.StringIsNotEmpty,
-				ConflictsWith: []string{"docker_image"},
+				ConflictsWith: []string{"docker_image", "docker_username", "docker_password"},
 				ForceNew:      true,
 			},
 
@@ -88,6 +88,24 @@ func resourceDroplet() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ValidateFunc:  validation.StringIsNotEmpty,
+				ConflictsWith: []string{"stack", "buildpacks", "source_code_path"},
+				ForceNew:      true,
+			},
+
+			"docker_username": {
+				Description:   "The username to use for accessing a private docker_image",
+				Type:             schema.TypeString,
+				Optional:         true,
+				Sensitive:        true,
+				ConflictsWith:    []string{"stack", "buildpacks", "source_code_path"},
+				ForceNew:         true,
+			},
+
+			"docker_password": {
+				Description:   "The password to use for accessing a private docker_image",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
 				ConflictsWith: []string{"stack", "buildpacks", "source_code_path"},
 				ForceNew:      true,
 			},
@@ -162,7 +180,17 @@ func resourceDropletCreate(ctx context.Context, d *schema.ResourceData, m interf
 	case constant.AppLifecycleTypeDocker:
 		// set lifecycle type on app
 		dockerImage := d.Get("docker_image").(string)
-		newDockerDroplet, errs := createDockerDroplet(ctx, s, appGUID, dockerImage, waitTimeout)
+		dockerUsername := d.Get("docker_username").(string)
+		dockerPassword := d.Get("docker_password").(string)
+		newDockerDroplet, errs := createDockerDroplet(
+			ctx,
+			s,
+			appGUID,
+			dockerImage,
+			dockerUsername,
+			dockerPassword,
+			waitTimeout,
+		)
 		diags = append(diags, errs...)
 		if diags.HasError() {
 			return diags
@@ -330,11 +358,13 @@ func createBuildpackDroplet(ctx context.Context, s *managers.Session, appGUID, s
 	return &droplet, diags
 }
 
-func createDockerDroplet(ctx context.Context, s *managers.Session, appGUID, dockerImage string, waitTimeout time.Duration) (_ *resources.Droplet, diags diag.Diagnostics) {
+func createDockerDroplet(ctx context.Context, s *managers.Session, appGUID, dockerImage, dockerUsername, dockerPassword string, waitTimeout time.Duration) (_ *resources.Droplet, diags diag.Diagnostics) {
 
 	pkg, warns, err := s.ClientV3.CreatePackage(resources.Package{
 		Type:        constant.PackageTypeDocker,
 		DockerImage: dockerImage,
+		DockerUsername: dockerUsername,
+		DockerPassword: dockerPassword,
 		Relationships: resources.Relationships{
 			constant.RelationshipTypeApplication: resources.Relationship{
 				GUID: appGUID,
