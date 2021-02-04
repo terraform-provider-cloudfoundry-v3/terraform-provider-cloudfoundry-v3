@@ -55,3 +55,5 @@ The following arguments are supported:
 * `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `${base64sha256(file("file.zip"))}`,
 where "file.zip" is the local filename of the lambda function source archive.
 * `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0
+* `docker_username` - (Optional, String) The username to use for accessing a private docker_image
+* `docker_password` - (Optional, String) The password to use for accessing a private docker_image
